@@ -242,13 +242,9 @@ const AdminPanelPage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-900 dark:via-green-950 dark:to-emerald-950 transition-colors duration-300 flex items-center justify-center">
         <div className="text-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="inline-block"
-          >
-            <Shield size={64} className="text-green-600 dark:text-green-400" />
-          </motion.div>
+          <div className="inline-block">
+            <Shield size={64} className="text-green-600 dark:text-green-400 animate-pulse" />
+          </div>
           <p className="mt-4 text-gray-600 dark:text-gray-300 text-lg">Loading admin panel...</p>
         </div>
       </div>
@@ -262,24 +258,14 @@ const AdminPanelPage = () => {
         <div className="container mx-auto px-4 py-8 pt-20">
           <div className="flex items-center justify-center min-h-[70vh]">
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
               className="max-w-2xl mx-auto text-center"
             >
-              <motion.div
-                animate={{
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-                className="mb-6"
-              >
+              <div className="mb-6">
                 <AlertCircle size={80} className="text-orange-500 dark:text-orange-400 mx-auto" />
-              </motion.div>
+              </div>
 
               <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 via-red-600 to-pink-600 dark:from-orange-400 dark:via-red-400 dark:to-pink-400 bg-clip-text text-transparent mb-6">
                 Access Restricted
@@ -341,18 +327,9 @@ const AdminPanelPage = () => {
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
-              <motion.div
-                animate={{
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              >
+              <div>
                 <Shield size={48} className="text-green-600 dark:text-green-400" />
-              </motion.div>
+              </div>
               <div>
                 <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
                   Admin Panel
