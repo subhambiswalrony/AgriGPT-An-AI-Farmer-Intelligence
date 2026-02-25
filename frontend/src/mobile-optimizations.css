@@ -2,6 +2,7 @@
 
 /* Disable hover effects on touch devices */
 @media (hover: none) and (pointer: coarse) {
+
   .hover\:scale-105,
   .hover\:scale-110,
   .hover\:scale-102,
@@ -16,6 +17,7 @@
 
 /* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -24,6 +26,22 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  .backdrop-blur-xl,
+  .backdrop-blur-lg,
+  .backdrop-blur-md,
+  .backdrop-blur-sm {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: rgba(255, 255, 255, 0.95) !important;
+  }
+
+  html.dark .backdrop-blur-xl,
+  html.dark .backdrop-blur-lg,
+  html.dark .backdrop-blur-md,
+  html.dark .backdrop-blur-sm {
+    background-color: rgba(17, 24, 39, 0.95) !important;
+  }
 }
 
 /* Optimize scrolling on mobile */
@@ -31,7 +49,7 @@
   * {
     -webkit-overflow-scrolling: touch;
   }
-  
+
   /* Keep gradients but optimize rendering */
   .bg-gradient-to-br,
   .bg-gradient-to-r,
@@ -44,7 +62,7 @@
   .shadow-2xl {
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
   }
-  
+
   .shadow-xl {
     box-shadow: 0 8px 10px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
   }
@@ -52,6 +70,7 @@
 
 /* Optimize animations on low-end devices */
 @media (max-width: 768px) and (prefers-reduced-motion: no-preference) {
+
   .animate-spin,
   .animate-pulse,
   .animate-bounce {
@@ -87,12 +106,12 @@ body {
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
   }
-  
+
   .backdrop-blur-lg {
     backdrop-filter: blur(8px) !important;
     -webkit-backdrop-filter: blur(8px) !important;
   }
-  
+
   .backdrop-blur-md {
     backdrop-filter: blur(6px) !important;
     -webkit-backdrop-filter: blur(6px) !important;
@@ -100,8 +119,19 @@ body {
 }
 
 /* Hardware acceleration for better performance */
+/* Further GPU optimizations */
 .motion-div {
   transform: translateZ(0);
   backface-visibility: hidden;
   perspective: 1000px;
+}
+
+/* Optimize images */
+img {
+  content-visibility: auto;
+}
+
+/* Reduce layout shifts */
+.max-w-7xl {
+  contain: layout;
 }
