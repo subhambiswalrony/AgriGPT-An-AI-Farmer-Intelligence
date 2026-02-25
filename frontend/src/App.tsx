@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Loader from './components/Loader';
 import ScrollToTop from './components/ScrollToTop';
@@ -10,7 +11,7 @@ const HomePage = React.lazy(() => import('./pages/HomePage'));
 const ChatPage = React.lazy(() => import('./pages/ChatPage'));
 const UploadPage = React.lazy(() => import('./pages/UploadPage'));
 const ReportPage = React.lazy(() => import('./pages/ReportPage'));
-const TeamPage = React.lazy(() => import('./pages/TeamPage'));
+// const TeamPage = React.lazy(() => import('./pages/TeamPage'));
 const WeatherPage = React.lazy(() => import('./pages/WeatherPage'));
 const AuthPage = React.lazy(() => import('./pages/AuthPage'));
 const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'));
@@ -49,28 +50,30 @@ function App() {
 
   return (
     <ThemeProvider>
-      <Router>
-        <ScrollToTop />
-        <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
-          <Navigation />
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/chat" element={<ChatPage />} />
-              <Route path="/upload" element={<UploadPage />} />
-              <Route path="/report" element={<ReportPage />} />
-              <Route path="/team" element={<TeamPage />} />
-              <Route path="/weather" element={<WeatherPage />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/feedback" element={<FeedbackPage />} />
-              <Route path="/admin" element={<AdminPanelPage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </Suspense>
-        </div>
-      </Router>
+      <MotionConfig reducedMotion="user">
+        <Router>
+          <ScrollToTop />
+          <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+            <Navigation />
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/chat" element={<ChatPage />} />
+                <Route path="/upload" element={<UploadPage />} />
+                <Route path="/report" element={<ReportPage />} />
+                {/* <Route path="/team" element={<TeamPage />} /> */}
+                <Route path="/weather" element={<WeatherPage />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/feedback" element={<FeedbackPage />} />
+                <Route path="/admin" element={<AdminPanelPage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </Suspense>
+          </div>
+        </Router>
+      </MotionConfig>
     </ThemeProvider>
   );
 }
