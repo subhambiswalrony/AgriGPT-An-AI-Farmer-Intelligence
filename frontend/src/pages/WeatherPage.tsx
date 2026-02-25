@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  MapPin, 
-  Search, 
-  Sun, 
-  Wind, 
-  Droplets, 
-  Eye, 
-  Sunrise, 
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import {
+  MapPin,
+  Search,
+  Sun,
+  Wind,
+  Droplets,
+  Eye,
+  Sunrise,
   Sunset,
   Thermometer,
   Navigation,
@@ -63,6 +63,7 @@ const WeatherPage = () => {
   const [location, setLocation] = useState('');
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; size: number; delay: number }>>([]);
 
   // Generate floating particles for background animation
@@ -91,7 +92,7 @@ const WeatherPage = () => {
     ];
 
     const days = ['Today', 'Tomorrow', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    
+
     return {
       location: locationName,
       current: {
@@ -131,7 +132,7 @@ const WeatherPage = () => {
 
   const handleSearch = () => {
     if (!location.trim()) return;
-    
+
     setIsLoading(true);
     setTimeout(() => {
       const data = generateWeatherData(location);
@@ -156,7 +157,7 @@ const WeatherPage = () => {
     <div className="min-h-screen p-4 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-green-950 dark:to-emerald-950 transition-all duration-500 relative overflow-hidden">
       {/* Animated Background Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {particles.map((particle) => (
+        {particles.slice(0, shouldReduceMotion ? 5 : 20).map((particle) => (
           <motion.div
             key={particle.id}
             className="absolute rounded-full bg-blue-400/20 dark:bg-green-500/10"
@@ -201,6 +202,7 @@ const WeatherPage = () => {
               ease: "easeInOut"
             }}
             className="absolute -left-16 top-0 text-6xl opacity-20 pointer-events-none hidden lg:block"
+            style={{ display: shouldReduceMotion ? 'none' : 'block' }}
           >
             ☀️
           </motion.div>
@@ -216,6 +218,7 @@ const WeatherPage = () => {
               delay: 1
             }}
             className="absolute -right-16 top-8 text-6xl opacity-20 pointer-events-none hidden lg:block"
+            style={{ display: shouldReduceMotion ? 'none' : 'block' }}
           >
             🌧️
           </motion.div>
@@ -286,7 +289,7 @@ const WeatherPage = () => {
               Advanced Analytics for Precision Agriculture
             </motion.span>
           </motion.p>
-          
+
           {/* Feature Pills */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -321,81 +324,81 @@ const WeatherPage = () => {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 rounded-3xl shadow-2xl border-2 border-white/50 dark:border-green-700/50 p-6 mb-8 transition-all duration-300"
         >
-            <div className="flex gap-4 flex-wrap">
-              <div className="flex-1 min-w-[300px] relative group">
-                <motion.div
-                  animate={{
-                    scale: [1, 1.1, 1]
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity
-                  }}
-                >
-                  <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 dark:text-blue-400 transition-all duration-300 group-hover:scale-110" size={22} />
-                </motion.div>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Enter district or area name (e.g., Bhubaneswar, Cuttack)"
-                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 dark:border-green-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/50 dark:focus:ring-green-500/50 focus:border-blue-500 dark:focus:border-green-500 bg-white/90 dark:bg-gray-700/90 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-300 backdrop-blur-sm font-medium shadow-inner"
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                />
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleSearch}
-                disabled={!location.trim() || isLoading}
-                className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 dark:from-green-500 dark:via-emerald-500 dark:to-teal-600 text-white px-8 py-4 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center space-x-2 shadow-xl hover:shadow-2xl overflow-hidden font-bold"
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-1 min-w-[300px] relative group">
+              <motion.div
+                animate={{
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity
+                }}
               >
-                {/* Shimmer Effect */}
-                <motion.div
-                  animate={{
-                    x: ['-100%', '200%']
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: "linear"
-                  }}
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12"
-                />
-                <Search size={20} className="relative z-10" />
-                <span className="font-bold relative z-10">{isLoading ? 'Searching...' : 'Search'}</span>
-              </motion.button>
-              
-              {/* Clear Button */}
-              <AnimatePresence>
-                {weatherData && (
-                  <motion.button
-                    initial={{ opacity: 0, scale: 0.8, x: 20 }}
-                    animate={{ opacity: 1, scale: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.8, x: 20 }}
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleClear}
-                    className="relative bg-gradient-to-r from-red-500 to-pink-600 text-white px-8 py-4 rounded-2xl transition-all duration-300 flex items-center space-x-2 shadow-xl hover:shadow-2xl overflow-hidden font-bold"
-                    title="Clear results"
-                  >
-                    <motion.div
-                      animate={{
-                        x: ['-100%', '200%']
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "linear"
-                      }}
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12"
-                    />
-                    <X size={20} className="relative z-10" />
-                    <span className="font-bold relative z-10">Clear</span>
-                  </motion.button>
-                )}
-              </AnimatePresence>
+                <MapPin className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 dark:text-blue-400 transition-all duration-300 group-hover:scale-110" size={22} />
+              </motion.div>
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Enter district or area name (e.g., Bhubaneswar, Cuttack)"
+                className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 dark:border-green-700 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/50 dark:focus:ring-green-500/50 focus:border-blue-500 dark:focus:border-green-500 bg-white/90 dark:bg-gray-700/90 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 transition-all duration-300 backdrop-blur-sm font-medium shadow-inner"
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              />
             </div>
+            <motion.button
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleSearch}
+              disabled={!location.trim() || isLoading}
+              className="relative bg-gradient-to-r from-blue-500 via-purple-500 to-indigo-600 dark:from-green-500 dark:via-emerald-500 dark:to-teal-600 text-white px-8 py-4 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center space-x-2 shadow-xl hover:shadow-2xl overflow-hidden font-bold"
+            >
+              {/* Shimmer Effect */}
+              <motion.div
+                animate={{
+                  x: ['-100%', '200%']
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "linear"
+                }}
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12"
+              />
+              <Search size={20} className="relative z-10" />
+              <span className="font-bold relative z-10">{isLoading ? 'Searching...' : 'Search'}</span>
+            </motion.button>
+
+            {/* Clear Button */}
+            <AnimatePresence>
+              {weatherData && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.8, x: 20 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.8, x: 20 }}
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleClear}
+                  className="relative bg-gradient-to-r from-red-500 to-pink-600 text-white px-8 py-4 rounded-2xl transition-all duration-300 flex items-center space-x-2 shadow-xl hover:shadow-2xl overflow-hidden font-bold"
+                  title="Clear results"
+                >
+                  <motion.div
+                    animate={{
+                      x: ['-100%', '200%']
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "linear"
+                    }}
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12"
+                  />
+                  <X size={20} className="relative z-10" />
+                  <span className="font-bold relative z-10">Clear</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
         </motion.div>
 
         {/* Enhanced Loading State with Scanner Animation */}
@@ -414,15 +417,15 @@ const WeatherPage = () => {
                   transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                   className="absolute inset-0 border-4 border-transparent border-t-blue-500 dark:border-t-green-500 border-r-purple-500 dark:border-r-emerald-500 rounded-3xl"
                 />
-                
+
                 <div className="relative flex items-center space-x-6">
                   <div className="relative">
                     <motion.div
-                      animate={{ 
+                      animate={{
                         rotate: 360,
                         scale: [1, 1.1, 1]
                       }}
-                      transition={{ 
+                      transition={{
                         rotate: { duration: 2, repeat: Infinity, ease: "linear" },
                         scale: { duration: 1.5, repeat: Infinity }
                       }}
@@ -432,7 +435,7 @@ const WeatherPage = () => {
                     </motion.div>
                     {/* Pulsing Ring */}
                     <motion.div
-                      animate={{ 
+                      animate={{
                         scale: [1, 1.5, 1],
                         opacity: [0.5, 0, 0.5]
                       }}
@@ -440,7 +443,7 @@ const WeatherPage = () => {
                       className="absolute inset-0 bg-blue-500 dark:bg-green-500 rounded-2xl"
                     />
                   </div>
-                  
+
                   <div className="flex flex-col">
                     <div className="flex space-x-3 mb-3">
                       {[0, 1, 2, 3].map((i) => (
@@ -465,7 +468,7 @@ const WeatherPage = () => {
                     <p className="text-gray-600 dark:text-gray-400 font-medium text-sm">
                       Scanning patterns for <span className="text-blue-600 dark:text-green-400 font-bold">{location}</span>
                     </p>
-                    
+
                     {/* Progress Steps */}
                     <div className="mt-4 space-y-2">
                       {['Fetching data', 'Processing', 'Analyzing'].map((step, idx) => (
@@ -477,11 +480,11 @@ const WeatherPage = () => {
                           className="flex items-center space-x-2"
                         >
                           <motion.div
-                            animate={{ 
+                            animate={{
                               scale: [1, 1.2, 1],
                               opacity: [0.5, 1, 0.5]
                             }}
-                            transition={{ 
+                            transition={{
                               duration: 1,
                               repeat: Infinity,
                               delay: idx * 0.3
@@ -527,7 +530,7 @@ const WeatherPage = () => {
                 transition={{ duration: 10, repeat: Infinity }}
                 className="absolute inset-0"
               />
-              
+
               {/* Content Overlay */}
               <div className="relative backdrop-blur-sm bg-black/10 p-8">
                 <div className="flex items-center justify-between">
@@ -539,7 +542,7 @@ const WeatherPage = () => {
                     <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">{weatherData.location}</h2>
                     <p className="text-white/90 text-lg">Current Conditions</p>
                   </motion.div>
-                  
+
                   <motion.div
                     initial={{ x: 30, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
@@ -859,7 +862,7 @@ const WeatherPage = () => {
                   <span className="text-sm">Live Data</span>
                 </motion.div>
               </div>
-              
+
               <div className="text-sm text-gray-600 dark:text-gray-400 mb-6 font-medium">
                 📍 Analysis for: <span className="text-green-600 dark:text-green-400 font-bold">{weatherData.location}</span>
               </div>
@@ -886,7 +889,7 @@ const WeatherPage = () => {
                     }}
                     transition={{ duration: 3, repeat: Infinity }}
                   />
-                  
+
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
                       <motion.div
@@ -897,7 +900,7 @@ const WeatherPage = () => {
                       </motion.div>
                       <span className="text-sm text-gray-700 dark:text-gray-300 font-bold">Soil Moisture</span>
                     </div>
-                    
+
                     {/* Circular Progress */}
                     <div className="flex items-center justify-center mb-4">
                       <div className="relative w-32 h-32">
@@ -921,7 +924,7 @@ const WeatherPage = () => {
                             strokeLinecap="round"
                             className="text-blue-500 dark:text-blue-400"
                             initial={{ strokeDasharray: "0 352" }}
-                            animate={{ 
+                            animate={{
                               strokeDasharray: `${(weatherData.soil.moisture / 100) * 352} 352`,
                             }}
                             transition={{ duration: 1.5, ease: "easeOut" }}
@@ -936,10 +939,10 @@ const WeatherPage = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Progress Bar */}
                     <div className="w-full bg-blue-200 dark:bg-blue-900/50 rounded-full h-3 overflow-hidden">
-                      <motion.div 
+                      <motion.div
                         className="bg-gradient-to-r from-blue-500 to-cyan-500 h-3 rounded-full"
                         initial={{ width: 0 }}
                         animate={{ width: `${weatherData.soil.moisture}%` }}
@@ -971,7 +974,7 @@ const WeatherPage = () => {
                     }}
                     transition={{ duration: 3, repeat: Infinity }}
                   />
-                  
+
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
                       <motion.div
@@ -982,7 +985,7 @@ const WeatherPage = () => {
                       </motion.div>
                       <span className="text-sm text-gray-700 dark:text-gray-300 font-bold">pH Level</span>
                     </div>
-                    
+
                     <div className="flex items-center justify-center mb-4">
                       <div className="relative w-32 h-32">
                         <svg className="transform -rotate-90 w-32 h-32">
@@ -1005,7 +1008,7 @@ const WeatherPage = () => {
                             strokeLinecap="round"
                             className="text-green-500 dark:text-green-400"
                             initial={{ strokeDasharray: "0 352" }}
-                            animate={{ 
+                            animate={{
                               strokeDasharray: `${((weatherData.soil.ph - 4) / 10) * 352} 352`,
                             }}
                             transition={{ duration: 1.5, ease: "easeOut" }}
@@ -1020,7 +1023,7 @@ const WeatherPage = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* pH Scale */}
                     <div className="relative w-full h-3 rounded-full overflow-hidden bg-gradient-to-r from-red-500 via-green-500 to-blue-500 mb-2">
                       <motion.div
@@ -1055,7 +1058,7 @@ const WeatherPage = () => {
                     }}
                     transition={{ duration: 3, repeat: Infinity }}
                   />
-                  
+
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-4">
                       <motion.div
@@ -1066,7 +1069,7 @@ const WeatherPage = () => {
                       </motion.div>
                       <span className="text-sm text-gray-700 dark:text-gray-300 font-bold">Soil Temp</span>
                     </div>
-                    
+
                     <div className="flex items-center justify-center mb-4">
                       <div className="relative w-32 h-32">
                         <svg className="transform -rotate-90 w-32 h-32">
@@ -1089,7 +1092,7 @@ const WeatherPage = () => {
                             strokeLinecap="round"
                             className="text-orange-500 dark:text-orange-400"
                             initial={{ strokeDasharray: "0 352" }}
-                            animate={{ 
+                            animate={{
                               strokeDasharray: `${(weatherData.soil.temperature / 40) * 352} 352`,
                             }}
                             transition={{ duration: 1.5, ease: "easeOut" }}
@@ -1104,10 +1107,10 @@ const WeatherPage = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Temperature Bar */}
                     <div className="w-full bg-orange-200 dark:bg-orange-900/50 rounded-full h-3 overflow-hidden">
-                      <motion.div 
+                      <motion.div
                         className="bg-gradient-to-r from-orange-500 to-amber-500 h-3 rounded-full"
                         initial={{ width: 0 }}
                         animate={{ width: `${(weatherData.soil.temperature / 40) * 100}%` }}
@@ -1246,7 +1249,7 @@ const WeatherPage = () => {
                 >
                   <Sprout size={128} className="text-green-500" />
                 </motion.div>
-                
+
                 <div className="relative z-10">
                   <h4 className="font-bold text-green-800 dark:text-green-300 mb-3 flex items-center text-xl">
                     <motion.span
