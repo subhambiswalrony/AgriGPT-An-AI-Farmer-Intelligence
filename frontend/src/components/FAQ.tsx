@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Plus, Minus, HelpCircle } from 'lucide-react';
+import { Plus, Minus, HelpCircle } from 'lucide-react';
 
 interface FAQItemProps {
     question: string;
@@ -14,8 +14,8 @@ const FAQItem = ({ question, answer, isOpen, onClick }: FAQItemProps) => {
         <motion.div
             initial={false}
             className={`mb-4 overflow-hidden rounded-2xl border-2 transition-all duration-300 ${isOpen
-                    ? 'border-green-400 bg-white shadow-lg dark:border-green-500 dark:bg-gray-800'
-                    : 'border-green-100 bg-green-50/50 hover:border-green-200 dark:border-gray-700 dark:bg-gray-800/50'
+                ? 'border-green-400 bg-white shadow-lg dark:border-green-500 dark:bg-gray-800'
+                : 'border-green-100 bg-green-50/50 hover:border-green-200 dark:border-gray-700 dark:bg-gray-800/50'
                 }`}
         >
             <button
@@ -94,8 +94,10 @@ const FAQ = () => {
                         <HelpCircle size={16} className="mr-2" />
                         Common Questions
                     </div>
-                    <h2 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-4">
-                        Frequently Asked Questions
+                    <h2 className="text-4xl font-bold mb-4">
+                        <span className="bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-teal-400 bg-clip-text text-transparent">
+                            Frequently Asked Questions
+                        </span>
                     </h2>
                     <p className="text-lg text-gray-600 dark:text-gray-300">
                         Everything you need to know about AgriGPT and its features
