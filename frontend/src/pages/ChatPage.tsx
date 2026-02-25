@@ -28,6 +28,7 @@ const ChatPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useMemo(() => isMobileDevice(), []);
+  const shouldReduceMotion = useReducedMotion();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -1146,11 +1147,13 @@ const ChatPage = () => {
                   whileTap={{ scale: 0.98 }}
                   className="relative w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 dark:from-green-600 dark:to-emerald-700 text-white px-4 py-3.5 rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 overflow-hidden group"
                 >
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                    animate={{ x: [-300, 300] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  />
+                  {!shouldReduceMotion && (
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                      animate={{ x: [-300, 300] }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    />
+                  )}
                   <Plus size={20} className="relative z-10" />
                   <span className="relative z-10">New Conversation</span>
                 </motion.button>
@@ -1273,11 +1276,13 @@ const ChatPage = () => {
                         whileTap={{ scale: 0.98 }}
                         className="relative w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-3.5 rounded-2xl font-semibold shadow-lg overflow-hidden group"
                       >
-                        <motion.div
-                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                          animate={{ x: [-300, 300] }}
-                          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                        />
+                        {!shouldReduceMotion && (
+                          <motion.div
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                            animate={{ x: [-300, 300] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                          />
+                        )}
                         <Plus size={20} className="relative z-10" />
                         <span className="relative z-10">New Conversation</span>
                       </motion.button>
