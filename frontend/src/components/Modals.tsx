@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { LogOut, AlertCircle } from 'lucide-react';
 
@@ -18,7 +19,7 @@ interface DeleteAccountModalProps {
 export const LogoutConfirmModal: React.FC<LogoutModalProps> = ({ isOpen, onConfirm, onCancel }) => {
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <>
       {/* Backdrop */}
       <motion.div
@@ -73,7 +74,8 @@ export const LogoutConfirmModal: React.FC<LogoutModalProps> = ({ isOpen, onConfi
           </div>
         </motion.div>
       </motion.div>
-    </>
+    </>,
+    document.body
   );
 };
 
