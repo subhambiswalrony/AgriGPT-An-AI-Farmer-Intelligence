@@ -1,7 +1,8 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, MessageCircle, Upload, FileText, Users, Menu, X, MapPin, Cloud, LogIn, LogOut, ChevronDown, Settings, Moon, Sun, Shield } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useWeather } from '../hooks/useWeather';
 import { useTheme } from '../contexts/ThemeContext';
 import { API_ENDPOINTS, getApiUrl, getAuthHeaders } from '../config/api';
@@ -22,6 +23,7 @@ const Navigation = () => {
   const navigate = useNavigate();
   const { weather, loading } = useWeather();
   const { isDarkMode, toggleTheme } = useTheme();
+  const shouldReduceMotion = useReducedMotion();
 
   // Check if user is a developer
   const checkDeveloperStatus = async () => {
@@ -50,7 +52,7 @@ const Navigation = () => {
     const name = localStorage.getItem('name');
     const email = localStorage.getItem('email');
     const picture = localStorage.getItem('profilePicture');
-    
+
     if (token) {
       setIsAuthenticated(true);
       setUserName(name || 'User');
@@ -74,7 +76,7 @@ const Navigation = () => {
 
     window.addEventListener('resize', handleResize);
     window.addEventListener('orientationchange', handleResize);
-    
+
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('orientationchange', handleResize);
@@ -119,13 +121,13 @@ const Navigation = () => {
     }
     return name.substring(0, 2).toUpperCase();
   };
-  
+
   const navItems = [
     { path: '/', icon: Home, label: 'Home' },
     { path: '/chat', icon: MessageCircle, label: 'Chat' },
     { path: '/upload', icon: Upload, label: 'Upload' },
     { path: '/report', icon: FileText, label: 'Report' },
-    { path: '/team', icon: Users, label: 'Team' },
+    // { path: '/team', icon: Users, label: 'Team' },
     { path: '/weather', icon: Cloud, label: 'Weather' },
   ];
 
@@ -144,34 +146,35 @@ const Navigation = () => {
   };
 
   if (showLoader) {
-    return (
+    return createPortal(
       <div className="fixed inset-0 z-[9999]">
         <Loader onLoadComplete={handleLoadComplete} />
-      </div>
-    );
+      </div>,
+      document.body
+    ) as unknown as React.ReactElement;
   }
 
   return (
-    <motion.nav 
-      className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-lg border-b-2 border-green-200/50 dark:border-green-700/50 sticky top-0 z-50 transition-all duration-300"
+    <motion.nav
+      className="bg-white/95 dark:bg-emerald-950/[0.97] backdrop-blur-xl shadow-lg border-b-2 border-green-200/50 dark:border-green-600/60 sticky top-0 z-50 transition-all duration-300"
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
       {/* Gradient accent line */}
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-green-400 via-emerald-500 to-teal-600 dark:from-green-500 dark:via-emerald-600 dark:to-teal-700" />
-      
+
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 sm:h-18">
           {/* Logo with enhanced styling */}
           <Link to="/" className="flex items-center space-x-2 group flex-shrink-0">
-            <motion.div 
+            <motion.div
               className="relative"
               whileHover={{ scale: 1.1, rotate: 10 }}
               transition={{ duration: 0.2 }}
             >
               <motion.div
-                animate={{
+                animate={shouldReduceMotion ? {} : {
                   opacity: [0.3, 0.6, 0.3],
                   scale: [1, 1.3, 1]
                 }}
@@ -183,31 +186,31 @@ const Navigation = () => {
               />
               <span className="text-2xl sm:text-3xl relative z-10">🌿</span>
             </motion.div>
-            <motion.span 
+            <motion.span
               className="text-lg sm:text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-teal-400 bg-clip-text text-transparent transition-all duration-200"
               whileHover={{ scale: 1.05 }}
             >
               AgriGPT
             </motion.span>
           </Link>
-          
+
           {/* Weather Info - Enhanced styling */}
           <div className="flex items-center space-x-1 sm:space-x-2 ml-2 sm:ml-4 flex-shrink-0">
             {loading ? (
-              <motion.div 
-                className="flex items-center space-x-1.5 backdrop-blur-xl bg-gray-100/80 dark:bg-gray-800/80 px-2 sm:px-3 py-1.5 sm:py-2 rounded-full border border-gray-300/50 dark:border-gray-600/50"
+              <motion.div
+                className="flex items-center space-x-1.5 backdrop-blur-xl bg-gray-100/80 dark:bg-emerald-900/50 px-2 sm:px-3 py-1.5 sm:py-2 rounded-full border border-gray-300/50 dark:border-emerald-700/50"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
-                <motion.div 
+                <motion.div
                   className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-green-400 dark:bg-green-500 rounded-full"
-                  animate={{ scale: [1, 1.3, 1], opacity: [1, 0.5, 1] }}
+                  animate={shouldReduceMotion ? {} : { scale: [1, 1.3, 1], opacity: [1, 0.5, 1] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
                 />
                 <span className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300 hidden xs:inline font-medium">Loading...</span>
               </motion.div>
             ) : weather ? (
-              <motion.div 
+              <motion.div
                 className="flex items-center space-x-1 sm:space-x-1.5 backdrop-blur-xl bg-gradient-to-r from-blue-50/90 to-cyan-50/90 dark:from-blue-900/40 dark:to-cyan-900/40 px-2 sm:px-3 py-1.5 sm:py-2 rounded-full border border-blue-300/50 dark:border-blue-600/50 hover:shadow-lg transition-all duration-200"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -215,7 +218,7 @@ const Navigation = () => {
               >
                 <MapPin size={10} className="text-blue-600 dark:text-blue-400 sm:w-3 sm:h-3" />
                 <span className="text-[9px] xs:text-[10px] sm:text-xs text-blue-700 dark:text-blue-300 font-semibold truncate max-w-[40px] xs:max-w-[60px] sm:max-w-none">{weather.location}</span>
-                <motion.span 
+                <motion.span
                   className="text-sm sm:text-base"
                   animate={{ rotate: [0, 10, -10, 0] }}
                   transition={{ duration: 2, repeat: Infinity }}
@@ -226,7 +229,7 @@ const Navigation = () => {
               </motion.div>
             ) : null}
           </div>
-          
+
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-0.5 lg:space-x-1 flex-shrink-0">
             {/* Theme Toggle */}
@@ -234,7 +237,7 @@ const Navigation = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={toggleTheme}
-              className="p-2.5 rounded-xl backdrop-blur-xl bg-gradient-to-br from-gray-50/80 to-gray-100/80 dark:from-gray-800/80 dark:to-gray-700/80 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-lg transition-all duration-200"
+              className="p-2.5 rounded-xl backdrop-blur-xl bg-gradient-to-br from-gray-50/80 to-gray-100/80 dark:from-emerald-900/60 dark:to-emerald-900/80 border border-gray-200/50 dark:border-emerald-700/50 hover:shadow-lg transition-all duration-200"
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               <AnimatePresence mode="wait">
@@ -270,18 +273,17 @@ const Navigation = () => {
               >
                 <Link
                   to={path}
-                  className={`flex items-center space-x-1.5 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-xl backdrop-blur-xl transition-all duration-200 ${
-                    location.pathname === path
-                      ? 'bg-gradient-to-br from-green-100/90 to-emerald-100/90 dark:from-green-900/40 dark:to-emerald-900/40 text-green-700 dark:text-green-400 shadow-lg border border-green-300/50 dark:border-green-600/50'
-                      : 'bg-gray-50/60 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 hover:bg-gradient-to-br hover:from-gray-100/90 hover:to-gray-50/90 dark:hover:from-gray-700/90 dark:hover:to-gray-800/90 hover:shadow-md border border-gray-200/30 dark:border-gray-700/30'
-                  }`}
+                  className={`flex items-center space-x-1.5 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 rounded-xl backdrop-blur-xl transition-all duration-200 ${location.pathname === path
+                    ? 'bg-gradient-to-br from-green-100/90 to-emerald-100/90 dark:from-green-700/30 dark:to-emerald-700/30 text-green-700 dark:text-green-300 shadow-lg border border-green-300/50 dark:border-green-500/50'
+                    : 'bg-gray-50/60 dark:bg-emerald-900/20 text-gray-600 dark:text-emerald-100/80 hover:bg-gradient-to-br hover:from-gray-100/90 hover:to-gray-50/90 dark:hover:from-emerald-800/40 dark:hover:to-emerald-900/40 hover:shadow-md border border-gray-200/30 dark:border-emerald-800/40'
+                    }`}
                 >
                   <Icon size={16} className="md:w-[18px] md:h-[18px]" />
                   <span className="hidden lg:block text-sm font-semibold">{label}</span>
                 </Link>
               </motion.div>
             ))}
-            
+
             {/* Profile or Login Button */}
             {isAuthenticated ? (
               <div className="relative ml-1 md:ml-2">
@@ -310,13 +312,13 @@ const Navigation = () => {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       transition={{ duration: 0.2, type: "spring" }}
-                      className="absolute right-0 mt-3 w-72 backdrop-blur-xl bg-white/90 dark:bg-gray-800/90 rounded-3xl shadow-2xl border border-green-200/30 dark:border-green-700/30 overflow-hidden z-50"
+                      className="absolute right-0 mt-3 w-72 backdrop-blur-xl bg-white/90 dark:bg-emerald-950/[0.97] rounded-3xl shadow-2xl border border-green-200/30 dark:border-emerald-700/40 overflow-hidden z-50"
                     >
                       {/* Gradient accent line */}
                       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-400 via-emerald-500 to-teal-600 dark:from-green-500 dark:via-emerald-600 dark:to-teal-700" />
-                      
+
                       {/* User Info Section */}
-                      <div className="relative px-6 py-5 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/30 dark:to-emerald-950/30">
+                      <div className="relative px-6 py-5 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-emerald-900/30 dark:to-teal-900/20">
                         <div className="flex items-start space-x-4">
                           <div className="relative">
                             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-xl overflow-hidden shadow-lg">
@@ -328,7 +330,7 @@ const Navigation = () => {
                             </div>
                             {/* Online indicator */}
                             <motion.div
-                              animate={{ scale: [1, 1.2, 1] }}
+                              animate={shouldReduceMotion ? {} : { scale: [1, 1.2, 1] }}
                               transition={{ duration: 2, repeat: Infinity }}
                               className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full"
                             />
@@ -383,7 +385,7 @@ const Navigation = () => {
                             <ChevronDown size={16} className="-rotate-90" />
                           </motion.div>
                         </Link>
-                        
+
                         <button
                           onClick={handleLogoutClick}
                           className="group w-full px-6 py-3 text-left flex items-center space-x-3 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 dark:hover:from-red-900/20 dark:hover:to-pink-900/20 transition-all duration-200"
@@ -443,7 +445,7 @@ const Navigation = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={toggleTheme}
-              className="p-2 rounded-xl backdrop-blur-xl bg-gradient-to-br from-gray-50/80 to-gray-100/80 dark:from-gray-800/80 dark:to-gray-700/80 border border-gray-200/50 dark:border-gray-600/50 transition-all duration-200"
+              className="p-2 rounded-xl backdrop-blur-xl bg-gradient-to-br from-gray-50/80 to-gray-100/80 dark:from-emerald-900/60 dark:to-emerald-900/80 border border-gray-200/50 dark:border-emerald-700/50 transition-all duration-200"
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             >
               <AnimatePresence mode="wait">
@@ -470,15 +472,14 @@ const Navigation = () => {
                 )}
               </AnimatePresence>
             </motion.button>
-            
+
             {/* Hamburger Menu Button */}
             <motion.button
               onClick={toggleMobileMenu}
-              className={`p-2.5 rounded-xl backdrop-blur-xl transition-all duration-200 focus:outline-none border ${ 
-                isMobileMenuOpen 
-                  ? 'bg-gradient-to-br from-red-50/90 to-red-100/90 dark:from-red-900/40 dark:to-red-800/40 text-red-600 dark:text-red-400 shadow-lg border-red-300/50 dark:border-red-600/50' 
-                  : 'bg-gradient-to-br from-gray-50/80 to-gray-100/80 dark:from-gray-800/80 dark:to-gray-700/80 text-gray-700 dark:text-gray-200 border-gray-200/50 dark:border-gray-600/50 hover:shadow-md'
-              }`}
+              className={`p-2.5 rounded-xl backdrop-blur-xl transition-all duration-200 focus:outline-none border ${isMobileMenuOpen
+                ? 'bg-gradient-to-br from-red-50/90 to-red-100/90 dark:from-red-900/40 dark:to-red-800/40 text-red-600 dark:text-red-400 shadow-lg border-red-300/50 dark:border-red-600/50'
+                : 'bg-gradient-to-br from-gray-50/80 to-gray-100/80 dark:from-emerald-900/60 dark:to-emerald-900/80 text-gray-700 dark:text-emerald-100 border-gray-200/50 dark:border-emerald-700/50 hover:shadow-md'
+                }`}
               variants={hamburgerVariants}
               animate={isMobileMenuOpen ? "open" : "closed"}
               whileTap={{ scale: 0.95 }}
@@ -489,29 +490,30 @@ const Navigation = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation Menu */}
-        <AnimatePresence>
-          {isMobileMenuOpen && (
-            <>
-              {/* Backdrop */}
-              <motion.div
-                className="fixed inset-0 bg-gradient-to-br from-green-500/20 via-emerald-500/20 to-teal-500/20 backdrop-blur-md z-40 md:hidden"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                onClick={() => setIsMobileMenuOpen(false)}
-              />
-              
-              {/* Mobile Menu */}
-              <motion.div
-                className="fixed inset-0 z-50 md:hidden flex items-start sm:items-center justify-center p-3 sm:p-4 pt-20 sm:pt-4"
+        {/* Mobile Navigation Menu — portalled to body so backdrop-blur applies to real page content */}
+        {createPortal(
+          <AnimatePresence>
+            {isMobileMenuOpen && (
+              <>
+                {/* Backdrop */}
+                <motion.div
+                  className="fixed inset-0 bg-gradient-to-br from-green-500/20 via-emerald-500/20 to-teal-500/20 backdrop-blur-xl z-[9990]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                />
+
+                {/* Mobile Menu */}
+                <motion.div
+                  className="fixed inset-0 z-[9991] flex items-start sm:items-center justify-center p-3 sm:p-4 pt-20 sm:pt-4"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
               >
-                <div className="backdrop-blur-2xl bg-white/95 dark:bg-gray-900/95 rounded-3xl shadow-2xl border-2 border-green-200/50 dark:border-green-700/50 p-5 sm:p-6 w-full max-w-md max-h-[85vh] sm:max-h-[90vh] overflow-y-auto transition-colors duration-300">
+                <div className="backdrop-blur-2xl bg-white/95 dark:bg-emerald-950/[0.97] rounded-3xl shadow-2xl border-2 border-green-200/50 dark:border-emerald-600/50 p-5 sm:p-6 w-full max-w-md max-h-[85vh] sm:max-h-[90vh] overflow-y-auto transition-colors duration-300">
                   {/* Close Button */}
                   <div className="flex justify-between items-center mb-4 sm:mb-5">
                     <h3 className="text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-teal-400 bg-clip-text text-transparent">
@@ -530,7 +532,7 @@ const Navigation = () => {
 
                   {/* Mobile Weather Info */}
                   {weather && (
-                    <motion.div 
+                    <motion.div
                       className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 py-3 sm:py-3.5 mb-5 sm:mb-6 backdrop-blur-xl bg-gradient-to-r from-blue-50/90 to-cyan-50/90 dark:from-blue-900/40 dark:to-cyan-900/40 rounded-2xl border border-blue-300/50 dark:border-blue-600/50 text-xs sm:text-sm transition-all duration-300 shadow-md"
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -538,7 +540,7 @@ const Navigation = () => {
                     >
                       <MapPin size={12} className="text-blue-600 dark:text-blue-400 sm:w-3.5 sm:h-3.5" />
                       <span className="text-blue-700 dark:text-blue-300 font-medium">{weather.location}</span>
-                      <motion.span 
+                      <motion.span
                         className="text-base sm:text-lg"
                         animate={{ rotate: [0, 10, -10, 0] }}
                         transition={{ duration: 2, repeat: Infinity }}
@@ -552,8 +554,8 @@ const Navigation = () => {
 
                   {/* Profile Section for Mobile */}
                   {isAuthenticated && (
-                    <motion.div 
-                      className="mb-5 sm:mb-6 p-4 sm:p-5 backdrop-blur-xl bg-gradient-to-r from-green-50/90 to-emerald-50/90 dark:from-green-900/40 dark:to-emerald-900/40 rounded-2xl border border-green-300/50 dark:border-green-600/50 transition-all duration-300 shadow-md"
+                    <motion.div
+                      className="mb-5 sm:mb-6 p-4 sm:p-5 backdrop-blur-xl bg-gradient-to-r from-green-50/90 to-emerald-50/90 dark:from-emerald-900/40 dark:to-teal-900/30 rounded-2xl border border-green-300/50 dark:border-emerald-600/50 transition-all duration-300 shadow-md"
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.05 }}
@@ -573,7 +575,7 @@ const Navigation = () => {
                       </div>
                     </motion.div>
                   )}
-                  
+
                   {/* Navigation Items */}
                   <div className="space-y-1.5 sm:space-y-2">
                     {navItems.map(({ path, icon: Icon, label }, index) => (
@@ -587,11 +589,10 @@ const Navigation = () => {
                         <Link
                           to={path}
                           onClick={() => setIsMobileMenuOpen(false)}
-                          className={`flex items-center space-x-3 sm:space-x-3.5 px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl backdrop-blur-xl transition-all duration-200 border ${
-                            location.pathname === path
-                              ? 'bg-gradient-to-br from-green-100/90 to-emerald-100/90 dark:from-green-900/40 dark:to-emerald-900/40 text-green-700 dark:text-green-400 shadow-lg border-green-300/50 dark:border-green-600/50'
-                              : 'bg-gray-50/60 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-br hover:from-gray-100/90 hover:to-gray-50/90 dark:hover:from-gray-700/90 dark:hover:to-gray-800/90 hover:shadow-md border-gray-200/30 dark:border-gray-700/30'
-                          }`}
+                          className={`flex items-center space-x-3 sm:space-x-3.5 px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl backdrop-blur-xl transition-all duration-200 border ${location.pathname === path
+                            ? 'bg-gradient-to-br from-green-100/90 to-emerald-100/90 dark:from-green-700/30 dark:to-emerald-700/30 text-green-700 dark:text-green-300 shadow-lg border-green-300/50 dark:border-green-500/50'
+                            : 'bg-gray-50/60 dark:bg-emerald-900/20 text-gray-700 dark:text-emerald-100/80 hover:bg-gradient-to-br hover:from-gray-100/90 hover:to-gray-50/90 dark:hover:from-emerald-800/40 dark:hover:to-emerald-900/40 hover:shadow-md border-gray-200/30 dark:border-emerald-800/40'
+                            }`}
                         >
                           <Icon size={20} className="sm:w-[22px] sm:h-[22px] flex-shrink-0" />
                           <span className="text-sm sm:text-base font-semibold">{label}</span>
@@ -691,7 +692,9 @@ const Navigation = () => {
               </motion.div>
             </>
           )}
-        </AnimatePresence>
+          </AnimatePresence>,
+          document.body
+        )}
 
         {/* Logout Confirmation Modal */}
         <AnimatePresence>
