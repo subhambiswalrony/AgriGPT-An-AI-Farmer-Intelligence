@@ -9,10 +9,105 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
-  
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Performant CSS Scrolling Animations */
+  @keyframes scroll-left {
+    from {
+      transform: translateX(0);
+    }
+
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes scroll-right {
+    from {
+      transform: translateX(-50%);
+    }
+
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  .animate-scroll-left {
+    display: flex;
+    animation: scroll-left var(--scroll-speed, 40s) linear infinite;
+    will-change: transform;
+  }
+
+  .animate-scroll-right {
+    display: flex;
+    animation: scroll-right var(--scroll-speed, 40s) linear infinite;
+    will-change: transform;
+  }
+
+  /* Optimized blur for low-end */
+  @media (prefers-reduced-motion: reduce) {
+
+    .animate-scroll-left,
+    .animate-scroll-right {
+      animation-play-state: paused;
+    }
+  }
+
+  .pause-on-hover:hover .animate-scroll-left,
+  .pause-on-hover:hover .animate-scroll-right {
+    animation-play-state: paused;
+    cursor: pointer;
+  }
+
+  /* ── HomePage performance animations ── */
+
+  /* Particle float: only transform + opacity = GPU composited, zero layout */
+  @keyframes hp-float {
+    0%,  100% { transform: translateY(0px)   translateX(0px);  opacity: 0.2; }
+    40%        { transform: translateY(-16px) translateX(7px);  opacity: 0.4; }
+    70%        { transform: translateY(-6px)  translateX(-5px); opacity: 0.25; }
+  }
+  .hp-float {
+    animation: hp-float 9s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  /* Farmer gentle float */
+  @keyframes hp-farmer {
+    0%, 100% { transform: translateY(0px);   }
+    50%       { transform: translateY(-14px); }
+  }
+  .hp-farmer-float {
+    animation: hp-farmer 5s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  /* Button shimmer: background-position only = zero paint cost */
+  @keyframes hp-shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+  }
+  .hp-shimmer {
+    background: linear-gradient(105deg, transparent 38%, rgba(167,243,208,0.40) 50%, transparent 62%);
+    background-size: 200% 100%;
+    animation: hp-shimmer 2.4s linear infinite;
+  }
+  .hp-shimmer-light {
+    background: linear-gradient(105deg, transparent 38%, rgba(16,185,129,0.22) 50%, transparent 62%);
+    background-size: 200% 100%;
+    animation: hp-shimmer 2.4s linear infinite;
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .hp-float, .hp-farmer-float, .hp-shimmer, .hp-shimmer-light {
+      animation: none !important;
+      will-change: auto !important;
+    }
   }
 }
 
@@ -55,10 +150,9 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 html {
   scrollbar-width: thin;
   scrollbar-color: #22c55e #f0fdf4;
+  scroll-behavior: smooth;
 }
 
 html.dark {
   scrollbar-color: #16a34a #14532d;
 }
-
-
