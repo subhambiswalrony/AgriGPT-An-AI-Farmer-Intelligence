@@ -52,13 +52,13 @@ const Loader: React.FC<LoaderProps> = ({ onLoadComplete }) => {
 
   return (
     <motion.div 
-      className="fixed inset-0 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-900 dark:via-green-950 dark:to-emerald-950 flex items-center justify-center z-50 transition-colors duration-500"
+      className="fixed inset-0 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-900 dark:via-green-950 dark:to-emerald-950 flex items-center justify-center z-50 transition-colors duration-500 overflow-y-auto"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="text-center z-10 relative">
+      <div className="text-center z-10 relative w-full max-w-sm mx-auto px-4 py-8">
         {/* Logo and Title with glassmorphism */}
         <motion.div
           className="mb-8 backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 rounded-3xl p-8 pb-10 border-2 border-green-200/50 dark:border-green-700/50 shadow-2xl"
