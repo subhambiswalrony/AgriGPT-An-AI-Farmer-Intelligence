@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   return (
@@ -53,6 +54,12 @@ const Footer = () => {
                 Novice Bytes
               </span>
             </p>
+            <Link
+              to="/terms"
+              className="text-xs text-green-600 dark:text-emerald-400 hover:text-green-700 dark:hover:text-emerald-300 underline underline-offset-2 transition-colors duration-200 mt-1 inline-block"
+            >
+              Terms &amp; Conditions
+            </Link>
           </motion.div>
 
           {/* Right - Copyright */}
