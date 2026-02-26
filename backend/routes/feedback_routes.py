@@ -109,70 +109,116 @@ def check_developer():
 def get_admin_statistics():
     """Get comprehensive statistics for admin dashboard"""
     try:
-        # Total users
-        total_users = user_collection.count_documents({})
-        
-        # Total developers
-        total_developers = developers_collection.count_documents({})
-        
-        # Total chat sessions
-        total_chats = chat_sessions_collection.count_documents({})
-        
-        # Total reports generated
-        total_reports = report_collection.count_documents({})
-        
-        # Feature usage (count of each feature)
-        feature_usage = {
-            "chat": total_chats,
-            "report": total_reports,
-            "feedback": get_all_feedbacks().__len__()
-        }
-        
+        from datetime import datetime, timedelta, timezone
+
+        # Accept ?days= query param (7 / 14 / 30 / 365), default 7
+        try:
+            days_range = int(request.args.get("days", 7))
+            if days_range not in (7, 14, 30, 365):
+                days_range = 7
+        except (ValueError, TypeError):
+            days_range = 7
+
+        # Total counts
+        total_users       = user_collection.count_documents({})
+        total_developers  = developers_collection.count_documents({})
+        total_chats       = chat_sessions_collection.count_documents({})
+        total_reports     = report_collection.count_documents({})
+        total_feedbacks   = len(get_all_feedbacks())
+
         # Most used feature
-        most_used = max(feature_usage.items(), key=lambda x: x[1]) if feature_usage else ("None", 0)
-        
-        # Recent activity (last 7 days)
-        from datetime import datetime, timedelta
-        seven_days_ago = datetime.now() - timedelta(days=7)
-        
-        recent_users = user_collection.count_documents({
-            "created_at": {"$gte": seven_days_ago}
-        })
-        
-        recent_chats = chat_sessions_collection.count_documents({
-            "created_at": {"$gte": seven_days_ago}
-        })
-        
-        recent_reports = report_collection.count_documents({
-            "timestamp": {"$gte": seven_days_ago}
-        })
-        
+        feature_counts = {"chat": total_chats, "report": total_reports, "feedback": total_feedbacks}
+        most_used = max(feature_counts.items(), key=lambda x: x[1]) if feature_counts else ("None", 0)
+
+        # ── Timezone-safe window ─────────────────────────────────────────────
+        now_naive  = datetime.utcnow()
+        now_aware  = datetime.now(timezone.utc)
+        window_ago_naive = now_naive - timedelta(days=days_range)
+        window_ago_aware = now_aware - timedelta(days=days_range)
+
+        recent_users   = user_collection.count_documents({"created_at": {"$gte": window_ago_naive}})
+        recent_chats   = chat_sessions_collection.count_documents({"created_at": {"$gte": window_ago_aware}})
+        recent_reports = report_collection.count_documents({"timestamp": {"$gte": window_ago_aware}})
+
+        # ── Per-day breakdown (oldest → newest) ──────────────────────────────
+        # For days=365 return 12 monthly buckets instead of 365 daily ones
+        today_naive = now_naive.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_aware = now_aware.replace(hour=0, minute=0, second=0, microsecond=0)
+        daily_activity = []
+
+        if days_range == 365:
+            import calendar as _cal
+            for months_back in range(11, -1, -1):
+                year  = now_naive.year
+                month = now_naive.month - months_back
+                while month <= 0:
+                    month += 12
+                    year  -= 1
+                m_start_naive = datetime(year, month, 1)
+                last_day = _cal.monthrange(year, month)[1]
+                m_end_naive   = datetime(year, month, last_day, 23, 59, 59)
+                m_start_aware = m_start_naive.replace(tzinfo=timezone.utc)
+                m_end_aware   = m_end_naive.replace(tzinfo=timezone.utc)
+
+                m_users   = user_collection.count_documents({"created_at": {"$gte": m_start_naive, "$lte": m_end_naive}})
+                m_chats   = chat_sessions_collection.count_documents({"created_at": {"$gte": m_start_aware, "$lte": m_end_aware}})
+                m_reports = report_collection.count_documents({"timestamp": {"$gte": m_start_aware, "$lte": m_end_aware}})
+
+                daily_activity.append({
+                    "month":         m_start_naive.strftime("%b %Y"),
+                    "date":          m_start_naive.strftime("%b %Y"),
+                    "new_users":     m_users,
+                    "chat_sessions": m_chats,
+                    "reports":       m_reports,
+                })
+        else:
+            for days_back in range(days_range - 1, -1, -1):
+                d_start_naive = today_naive - timedelta(days=days_back)
+                d_end_naive   = d_start_naive + timedelta(days=1)
+                d_start_aware = today_aware  - timedelta(days=days_back)
+                d_end_aware   = d_start_aware + timedelta(days=1)
+
+                d_users   = user_collection.count_documents({"created_at": {"$gte": d_start_naive, "$lt": d_end_naive}})
+                d_chats   = chat_sessions_collection.count_documents({"created_at": {"$gte": d_start_aware, "$lt": d_end_aware}})
+                d_reports = report_collection.count_documents({"timestamp":  {"$gte": d_start_aware, "$lt": d_end_aware}})
+
+                daily_activity.append({
+                    "date":          d_start_naive.strftime("%b %d"),
+                    "new_users":     d_users,
+                    "chat_sessions": d_chats,
+                    "reports":       d_reports,
+                })
+
         return jsonify({
             "success": True,
             "statistics": {
                 "users": {
-                    "total": total_users,
-                    "developers": total_developers,
-                    "regular_users": total_users - total_developers,
-                    "recent_signups": recent_users
+                    "total":          total_users,
+                    "developers":     total_developers,
+                    "regular_users":  total_users - total_developers,
+                    "recent_signups": recent_users,
                 },
                 "feature_usage": {
-                    "chat_sessions": total_chats,
-                    "reports_generated": total_reports,
-                    "feedbacks_received": feature_usage["feedback"],
-                    "most_used_feature": {
-                        "name": most_used[0],
-                        "count": most_used[1]
-                    }
+                    "chat_sessions":      total_chats,
+                    "reports_generated":  total_reports,
+                    "feedbacks_received": total_feedbacks,
+                    "most_used_feature":  {"name": most_used[0], "count": most_used[1]},
+                    # "this week" counts for bar-chart toggle
+                    "chat_sessions_period":    recent_chats,
+                    "reports_period":          recent_reports,
+                    "feedbacks_period":        0,   # not date-filtered yet
+                    "users_period":            recent_users,
                 },
                 "recent_activity": {
                     "last_7_days": {
-                        "new_users": recent_users,
+                        "new_users":     recent_users,
                         "chat_sessions": recent_chats,
-                        "reports": recent_reports
-                    }
-                }
-            }
+                        "reports":       recent_reports,
+                    },
+                    "daily": daily_activity,
+                },
+                "days_range": days_range,
+            },
         }), 200
 
     except Exception as e:
