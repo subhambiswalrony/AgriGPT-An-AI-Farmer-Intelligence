@@ -108,12 +108,20 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
 - `GET /` - Server health status
 
 ### Authentication (No token required)
-- `POST /api/signup` - User registration
+- `POST /api/signup` - **Initiate signup** (sends OTP to email; does NOT create account yet)
   - Body: `{ "email": "user@example.com", "password": "password", "name": "Name" }`
+  - Returns: `{ "message": "OTP sent", "otp_id": "..." }`
+
+- `POST /api/verify-signup-otp` - **Complete signup** (verifies OTP and creates account)
+  - Body: `{ "email": "user@example.com", "otp": "123456", "name": "Name", "password": "password" }`
   - Returns: `{ "user_id", "email", "name", "token" }`
   
-- `POST /api/login` - User authentication
+- `POST /api/login` - **Initiate login** (verifies password then sends OTP)
   - Body: `{ "email": "user@example.com", "password": "password" }`
+  - Returns: `{ "message": "OTP sent to your email", "otp_id": "..." }`
+
+- `POST /api/verify-login-otp` - **Complete login** (verifies OTP and issues JWT)
+  - Body: `{ "email": "user@example.com", "otp": "123456" }`
   - Returns: `{ "user_id", "email", "name", "token" }`
 
 - `POST /api/auth/google` - **Google Sign-In with Firebase**
@@ -146,15 +154,27 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
 ### Chat (Trial & Authenticated)
 - `POST /api/chat` - Send text message
   - Headers: `Authorization: Bearer <token>` (optional, defaults to trial user)
-  - Body: `{ "message": "Your farming question" }`
-  - Returns: `{ "reply": "AI response" }`
+  - Body: `{ "message": "Your farming question", "chat_id": "<id>" (optional) }`
+  - Returns: `{ "reply": "AI response", "chat_id": "...", "session_id": "..." }`
 
 - `POST /api/voice` - Send voice input (authenticated users only)
   - Headers: `Authorization: Bearer <token>` (required)
   - Body: `multipart/form-data` with `audio` file
   - Returns: `{ "transcription": "...", "response": "...", "language": "..." }`
 
-- `GET /api/history` - Retrieve chat history (authenticated users only)
+- `GET /api/chats` - Get all chat sessions (authenticated users only)
+  - Headers: `Authorization: Bearer <token>` (required)
+  - Returns: Array of chat session objects
+
+- `GET /api/chats/<chat_id>` - Get full message history for a session
+  - Headers: `Authorization: Bearer <token>` (required)
+  - Returns: `{ "session": {...}, "messages": [...] }`
+
+- `DELETE /api/chats/<chat_id>` - Delete a specific chat session
+  - Headers: `Authorization: Bearer <token>` (required)
+  - Returns: `{ "message": "Chat deleted successfully" }`
+
+- `GET /api/history` - Retrieve flat chat history (authenticated users only)
   - Headers: `Authorization: Bearer <token>` (required)
   - Returns: Array of chat objects with timestamps
 
@@ -163,6 +183,10 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
   - Headers: `Authorization: Bearer <token>` (optional, defaults to trial user)
   - Body: `{ "cropName": "Rice", "region": "Odisha", "language": "English" }`
   - Returns: Report object with 4 sections (sowing, fertilizer, weather, calendar)
+
+- `GET /api/reports` - Get all saved farming reports (authenticated users only)
+  - Headers: `Authorization: Bearer <token>` (required)
+  - Returns: Array of saved report objects with timestamps
 
 ### Feedback System (Trial & Authenticated)
 - `POST /api/feedback` - Submit user feedback
@@ -307,6 +331,8 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
 ### Utilities
 - **python-dotenv** - Environment variable management from .env files
 - **weasyprint** - PDF generation support for farming reports
+- **gunicorn** - Production WSGI server for deployment
+- **torch** - PyTorch deep learning framework (required by Faster Whisper)
 
 ## 📁 Project Structure
 
@@ -316,6 +342,7 @@ backend/
 ├── 📄 chat.py                     # Text chat handler with multilingual language detection
 ├── 📄 voice.py                    # Voice input handler with Faster Whisper STT (offline)
 ├── 📄 report.py                   # AI-powered farming report generation with Gemini AI
+├── 📄 make_admin.py               # CLI utility to grant/revoke developer (admin panel) access
 ├── 📄 test_db.py                  # Database connection testing utility script
 ├── 📄 requirements.txt            # Python dependencies and versions
 ├── 📄 .env                        # Environment variables (create this - not in repo)
@@ -355,6 +382,7 @@ backend/
 - `chat.py` - Handles text chat requests, language detection, AI validation, response generation
 - `voice.py` - Processes voice audio files, Whisper transcription, language detection from audio
 - `report.py` - Generates comprehensive farming reports with 4 sections in user's language
+- `make_admin.py` - CLI utility to grant or revoke developer (admin panel) access for a user
 - `test_db.py` - Test MongoDB connectivity, view collections, test CRUD operations
 
 **Routes (API Endpoints):**
@@ -377,34 +405,34 @@ backend/
 
 ## 🔐 Authentication Flow
 
-1. **Signup**: POST `/api/signup` with `{email, password, name}`
-   - Checks for existing user
-   - Hashes password with bcrypt
-   - Returns JWT token and user details
-   - Creates timestamp for account creation
+1. **Signup** (OTP-Verified):
+   - Step 1: POST `/api/signup` with `{email, password, name}` → Sends OTP to email
+   - Step 2: POST `/api/verify-signup-otp` with `{email, otp, name, password}` → Creates account & returns JWT
 
-2. **Login**: POST `/api/login` with `{email, password}`
-   - Verifies credentials
-   - Updates last login timestamp
-   - Returns JWT token
+2. **Login** (OTP-Verified):
+   - Step 1: POST `/api/login` with `{email, password}` → Verifies credentials, sends OTP to email
+   - Step 2: POST `/api/verify-login-otp` with `{email, otp}` → Returns JWT token
 
-3. **Profile Management**:
+3. **Google Sign-In**: POST `/api/auth/google` with Firebase ID token in `Authorization` header → Returns JWT
+
+4. **Profile Management**:
    - Update profile: PUT `/api/update-profile`
    - Change password: PUT `/api/change-password` (requires current password)
+   - Link Google account: POST `/api/link-google`
 
-4. **Protected Endpoints**: Include token in header
+5. **Protected Endpoints**: Include token in header
    ```
    Authorization: Bearer <your-jwt-token>
    ```
 
-5. **Trial Access**: Chat and report endpoints work without authentication
+6. **Trial Access**: Chat and report endpoints work without authentication
    - Text chat accessible without token (trial user)
    - Voice features require authentication
    - Trial users not saved to database
 
 ## 🧪 Testing with Postman
 
-### 1. Signup (Email/Password)
+### 1. Initiate Signup (Sends OTP)
 ```json
 POST http://localhost:5000/api/signup
 Content-Type: application/json
@@ -416,8 +444,48 @@ Content-Type: application/json
 }
 ```
 
-### 2. Login (Email/Password)
+### 2. Complete Signup (Verify OTP)
 ```json
+POST http://localhost:5000/api/verify-signup-otp
+Content-Type: application/json
+
+{
+  "email": "farmer@example.com",
+  "otp": "123456",
+  "name": "John Farmer",
+  "password": "secure123"
+}
+```
+
+### 3. Initiate Login (Sends OTP)
+```json
+POST http://localhost:5000/api/login
+Content-Type: application/json
+
+{
+  "email": "farmer@example.com",
+  "password": "secure123"
+}
+```
+
+### 4. Complete Login (Verify OTP)
+```json
+POST http://localhost:5000/api/verify-login-otp
+Content-Type: application/json
+
+{
+  "email": "farmer@example.com",
+  "otp": "123456"
+}
+```
+
+### 5. Google Sign-In (Firebase)
+```json
+POST http://localhost:5000/api/auth/google
+Authorization: Bearer <firebase_id_token>
+Content-Type: application/json
+```
+Note: Get the Firebase ID token from frontend after Google authentication
 POST http://localhost:5000/api/login
 Content-Type: application/json
 
@@ -433,9 +501,10 @@ POST http://localhost:5000/api/auth/google
 Authorization: Bearer <firebase_id_token>
 Content-Type: application/json
 ```
+```
 Note: Get the Firebase ID token from frontend after Google authentication
 
-### 4. Create Password (Google Users)
+### 6. Create Password (Google Users)
 ```json
 POST http://localhost:5000/api/create-password
 Authorization: Bearer <jwt_token>
@@ -446,7 +515,7 @@ Content-Type: application/json
 }
 ```
 
-### 5. Update Profile
+### 7. Update Profile
 ```json
 PUT http://localhost:5000/api/update-profile
 Authorization: Bearer <your-token>
@@ -495,13 +564,13 @@ Content-Type: application/json
 }
 ```
 
-### 7. Get Chat History
+### 14. Get Chat History (Flat)
 ```
 GET http://localhost:5000/api/history
 Authorization: Bearer <your-token>
 ```
 
-### 8. Voice Input (requires audio file)
+### 15. Voice Input (requires audio file)
 ```
 POST http://localhost:5000/api/voice
 Authorization: Bearer <your-token>
@@ -1144,7 +1213,7 @@ Special thanks to:
 
 **Built with ❤️ for Indian Farmers** 🌾
 
-**Last Updated**: January 2026 | **Version**: 2.0
+**Last Updated**: February 2026 | **Version**: 2.0
 
 [⬆ Back to Top](#-agrigpt---agricultural-expert-chatbot-backend)
 
