@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { MotionConfig } from 'framer-motion';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Loader from './components/Loader';
@@ -13,12 +13,14 @@ const UploadPage = React.lazy(() => import('./pages/UploadPage'));
 const ReportPage = React.lazy(() => import('./pages/ReportPage'));
 // const TeamPage = React.lazy(() => import('./pages/TeamPage'));
 const WeatherPage = React.lazy(() => import('./pages/WeatherPage'));
-const AuthPage = React.lazy(() => import('./pages/AuthPage'));
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const SignupPage = React.lazy(() => import('./pages/SignupPage'));
 const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'));
 const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
 const FeedbackPage = React.lazy(() => import('./pages/FeedbackPage'));
 const AdminPanelPage = React.lazy(() => import('./pages/AdminPanelPage'));
 const NotFoundPage = React.lazy(() => import('./pages/NotFoundPage'));
+const TermsAndConditionsPage = React.lazy(() => import('./pages/TermsAndConditionsPage'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -63,11 +65,14 @@ function App() {
                 <Route path="/report" element={<ReportPage />} />
                 {/* <Route path="/team" element={<TeamPage />} /> */}
                 <Route path="/weather" element={<WeatherPage />} />
-                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/auth" element={<Navigate to="/login" replace />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/feedback" element={<FeedbackPage />} />
                 <Route path="/admin" element={<AdminPanelPage />} />
+                <Route path="/terms" element={<TermsAndConditionsPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </Suspense>
