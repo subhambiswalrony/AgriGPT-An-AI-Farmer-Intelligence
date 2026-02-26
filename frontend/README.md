@@ -400,11 +400,13 @@ frontend/
 │   │   └── 🖼️ vivekananda.jpg         # Team member photo (Vivekananda Champati)
 │   │
 │   ├── 📁 components/                 # Reusable UI components
+│   │   ├── 📄 FAQ.tsx                 # FAQ accordion component on home page
 │   │   ├── 📄 Footer.tsx              # Footer with links and copyright
 │   │   ├── 📄 LazyImage.tsx           # Lazy loading image component with Intersection Observer
 │   │   ├── 📄 Loader.tsx              # Loading spinner/animation component
 │   │   ├── 📄 Modals.tsx              # Reusable modal components (Logout, Delete Account)
 │   │   ├── 📄 Navigation.tsx          # Top navigation bar with theme toggle & auth status
+│   │   ├── 📄 PromptScroller.tsx      # Animated scrolling example prompts carousel
 │   │   └── 📄 ScrollToTop.tsx         # Scroll to top on route change utility
 │   │
 │   ├── 📁 config/                     # Configuration files
@@ -421,15 +423,17 @@ frontend/
 │   │
 │   ├── 📁 pages/                      # Page components (lazy loaded)
 │   │   ├── 📄 AdminPanelPage.tsx      # Admin dashboard with statistics & feedback management (developer-only)
-│   │   ├── 📄 AuthPage.tsx            # Login/Signup with dual authentication
-│   │   ├── 📄 ChatPage.tsx            # AI chat interface with voice support
+│   │   ├── 📄 ChatPage.tsx            # AI chat interface with voice support and session management
 │   │   ├── 📄 FeedbackPage.tsx        # User feedback submission form
 │   │   ├── 📄 HomePage.tsx            # Landing page with features showcase
+│   │   ├── 📄 LoginPage.tsx           # Login with email/password + Google Sign-In
+│   │   ├── 📄 SignupPage.tsx          # Signup with OTP email verification
 │   │   ├── 📄 NotFoundPage.tsx        # 404 error page
 │   │   ├── 📄 ReportPage.tsx          # Farming report generation & download
-│   │   ├── 📄 ResetPasswordPage.tsx   # Password reset (future feature)
+│   │   ├── 📄 ResetPasswordPage.tsx   # Password reset
 │   │   ├── 📄 SettingsPage.tsx        # User profile & settings management
-│   │   ├── 📄 TeamPage.tsx            # Team member information display
+│   │   ├── 📄 TeamPage.tsx            # Team member information display (currently disabled)
+│   │   ├── 📄 TermsAndConditionsPage.tsx # Terms and conditions page
 │   │   ├── 📄 UploadPage.tsx          # File upload (future feature)
 │   │   └── 📄 WeatherPage.tsx         # Weather dashboard with forecasts
 │   │
@@ -452,9 +456,11 @@ frontend/
 **Components (Reusable UI):**
 - `Navigation.tsx` - Responsive navbar, theme toggle, user menu, mobile hamburger, logout modal
 - `Footer.tsx` - Footer with quick links, social media, copyright info
+- `FAQ.tsx` - Accordion-style FAQ section displayed on the home page
 - `LazyImage.tsx` - Optimized image loading with blur placeholder & Intersection Observer
 - `Loader.tsx` - Loading spinner shown during async operations and route changes
 - `Modals.tsx` - Reusable modal components (LogoutConfirmModal, DeleteAccountModal)
+- `PromptScroller.tsx` - Horizontally scrolling carousel of example farming prompts
 - `ScrollToTop.tsx` - Automatically scrolls to top on route navigation
 
 **Configuration:**
@@ -470,15 +476,17 @@ frontend/
 - `useOptimizedAnimation.ts` - Detects mobile devices, reduces motion on low-end devices
 
 **Pages (Lazy Loaded):**
-- `HomePage.tsx` - Hero section, features, call-to-action buttons
-- `AuthPage.tsx` - Email/password form, Google Sign-In button, form validation
-- `ChatPage.tsx` - Chat interface, message list, text/voice input, trial mode
-- `ReportPage.tsx` - Report form (crop, region, language), PDF generation
+- `HomePage.tsx` - Hero section, features, FAQ accordion, prompt scroller, call-to-action
+- `LoginPage.tsx` - Email/password form, Google Sign-In button, OTP verification flow
+- `SignupPage.tsx` - Registration form with OTP email verification before account creation
+- `ChatPage.tsx` - Chat interface, session list, message list, text/voice input, trial mode
+- `ReportPage.tsx` - Report form (crop, region, language), PDF generation, report history
 - `WeatherPage.tsx` - Weather cards, forecast, location detection
 - `SettingsPage.tsx` - Profile edit, password change, profile picture upload, logout button with confirmation modal, Google account linking, OTP verification
-- `TeamPage.tsx` - Team member cards with photos and roles
+- `TeamPage.tsx` - Team member cards with photos and roles (currently disabled in routing)
 - `FeedbackPage.tsx` - Feedback form submission with email validation
-- `AdminPanelPage.tsx` - Developer-only dashboard with statistics, feedback management, side-by-side layout, delete confirmation modal
+- `AdminPanelPage.tsx` - Developer-only dashboard with Recharts statistics, feedback management, side-by-side layout, delete confirmation modal
+- `TermsAndConditionsPage.tsx` - Full terms and conditions legal page
 - `NotFoundPage.tsx` - 404 error page with navigation back home
 
 **Utils:**
@@ -520,10 +528,12 @@ frontend/
 All API calls are configured in `src/config/api.ts`:
 
 ### Authentication Endpoints
-- `POST /api/signup` - Create new account (email/password)
-- `POST /api/login` - Email/password login
+- `POST /api/signup` - Initiate signup (sends OTP to email)
+- `POST /api/verify-signup-otp` - Complete signup (verify OTP, creates account)
+- `POST /api/login` - Initiate login (verify password, sends OTP)
+- `POST /api/verify-login-otp` - Complete login (verify OTP, returns JWT)
 - `POST /api/auth/google` - Google Sign-In authentication
-- `POST /api/verify-otp` - Verify OTP for authentication
+- `POST /api/verify-otp` - General OTP verification
 
 ### User Profile Endpoints
 - `PUT /api/update-profile` - Update user details (protected)
@@ -531,9 +541,13 @@ All API calls are configured in `src/config/api.ts`:
 - `POST /api/create-password` - Create password for Google users (protected)
 
 ### Chat & Reports Endpoints
-- `POST /api/chat` - Send text message
-- `POST /api/chat/voice` - Send voice message (protected)
-- `POST /api/generate-report` - Generate farming report
+- `POST /api/chat` - Send text message (optional auth for trial mode)
+- `POST /api/voice` - Send voice message (protected)
+- `GET /api/chats` - Get all chat sessions (protected)
+- `GET /api/chats/<id>` - Get specific chat session with messages (protected)
+- `DELETE /api/chats/<id>` - Delete a chat session (protected)
+- `POST /api/report` - Generate farming report (optional auth)
+- `GET /api/reports` - Get saved report history (protected)
 
 ### API Configuration
 
@@ -551,16 +565,18 @@ Authorization: Bearer <jwt_token>
 ## 🌐 Routes
 
 - `/` - Home page (landing page)
-- `/auth` - Login/Signup page with Google Sign-In
+- `/login` - Login page (email/password + Google Sign-In)
+- `/signup` - Signup page (with OTP email verification)
+- `/auth` - Redirects to `/login`
 - `/chat` - Chat interface (trial mode available)
-- `/team` - Team information
 - `/report` - Farming report generation
 - `/upload` - File upload page (future)
 - `/weather` - Weather dashboard
 - `/settings` - User settings and profile management (protected)
 - `/feedback` - User feedback form
 - `/admin` - Admin dashboard with statistics & feedback management (developer-only, protected)
-- `/reset-password` - Password reset (future)
+- `/terms` - Terms and conditions page
+- `/reset-password` - Password reset
 - `*` - 404 Not Found page
 
 ## 🔒 Protected Routes
@@ -815,6 +831,7 @@ Vercel provides the best experience for Vite apps with automatic builds and depl
 - `html2canvas` - Convert DOM to canvas for PDF generation
 - `jspdf` - Client-side PDF generation
 - `lucide-react` - Beautiful SVG icon library
+- `recharts` - Interactive charts for admin statistics dashboard
 - `react` & `react-dom` - Core React library (v18.3.1)
 - `react-markdown` - Render markdown in chat messages
 - `react-router-dom` - Client-side routing (v7.6.3)
@@ -1005,7 +1022,7 @@ Special thanks to:
 
 **Built with ❤️ for Indian Farmers** 🌾
 
-**Last Updated**: January 2026 | **Version**: 2.0
+**Last Updated**: February 2026 | **Version**: 2.0
 
 **Frontend Documentation** | [Backend Documentation](../backend/README.md) | [Main README](../README.md)
 
