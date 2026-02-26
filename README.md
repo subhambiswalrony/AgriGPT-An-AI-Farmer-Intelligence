@@ -279,6 +279,7 @@ HomePage.js       #  25 KB - Home page
 | React Router | 7.6.3 | Client-side Routing |
 | React Markdown | 10.1.0 | Markdown Rendering |
 | jsPDF | 3.0.4 | PDF Generation |
+| Recharts | 3.7.0 | Admin Statistics Charts |
 | Lucide React | 0.344.0 | Icon Library |
 
 ### Backend
@@ -295,6 +296,8 @@ HomePage.js       #  25 KB - Home page
 | PyJWT | Latest | JWT Token Management |
 | Bcrypt | Latest | Password Hashing |
 | LangDetect | Latest | Language Detection |
+| Torch | Latest | Deep Learning (Whisper backend) |
+| Gunicorn | Latest | Production WSGI Server |
 
 ---
 
@@ -314,23 +317,27 @@ AgriGPT-Chat-Report_System/
 │   │   ├── 📁 components/                # Reusable UI components
 │   │   │   ├── 📄 Navigation.tsx         # Nav bar with theme toggle
 │   │   │   ├── 📄 Footer.tsx             # Footer component
+│   │   │   ├── 📄 FAQ.tsx                # FAQ accordion component
 │   │   │   ├── 📄 LazyImage.tsx          # Optimized image loading
 │   │   │   ├── 📄 Loader.tsx             # Loading spinner
-│   │   │   ├── 📄 Modals.tsx              # Reusable modal components (Logout, Delete Account)
+│   │   │   ├── 📄 Modals.tsx             # Reusable modal components (Logout, Delete Account)
+│   │   │   ├── 📄 PromptScroller.tsx     # Scrolling example prompts carousel
 │   │   │   └── 📄 ScrollToTop.tsx        # Scroll behavior utility
 │   │   │
 │   │   ├── 📁 pages/                     # Page components (lazy loaded)
 │   │   │   ├── 📄 HomePage.tsx           # Landing page
-│   │   │   ├── 📄 AuthPage.tsx           # Login/Signup (dual auth)
-│   │   │   ├── 📄 ChatPage.tsx           # AI chat interface
+│   │   │   ├── 📄 LoginPage.tsx          # Login (email/password + Google Sign-In)
+│   │   │   ├── 📄 SignupPage.tsx         # Signup with OTP email verification
+│   │   │   ├── 📄 ChatPage.tsx           # AI chat interface with session management
 │   │   │   ├── 📄 ReportPage.tsx         # Farming report generation
 │   │   │   ├── 📄 WeatherPage.tsx        # Weather dashboard
 │   │   │   ├── 📄 SettingsPage.tsx       # User profile settings
-│   │   │   ├── 📄 TeamPage.tsx           # Team information
+│   │   │   ├── 📄 TeamPage.tsx           # Team information (currently disabled)
 │   │   │   ├── 📄 FeedbackPage.tsx       # Feedback form
 │   │   │   ├── 📄 AdminPanelPage.tsx     # Admin dashboard (developer-only)
+│   │   │   ├── 📄 TermsAndConditionsPage.tsx # Terms and conditions
 │   │   │   ├── 📄 UploadPage.tsx         # File upload (future)
-│   │   │   ├── 📄 ResetPasswordPage.tsx  # Password reset (future)
+│   │   │   ├── 📄 ResetPasswordPage.tsx  # Password reset
 │   │   │   └── 📄 NotFoundPage.tsx       # 404 error page
 │   │   │
 │   │   ├── 📁 config/                    # Configuration files
@@ -388,6 +395,7 @@ AgriGPT-Chat-Report_System/
 │   ├── 📄 chat.py                        # Chat handler logic
 │   ├── 📄 voice.py                       # Voice input handler
 │   ├── 📄 report.py                      # Report generation
+│   ├── 📄 make_admin.py                  # Grant/revoke developer access utility
 │   ├── 📄 test_db.py                     # DB test utility
 │   ├── 📄 requirements.txt               # Python dependencies
 │   ├── 📄 .env                           # Environment variables
@@ -651,14 +659,19 @@ Before you begin, ensure you have the following installed:
 | `backend/utils/` | Helpers | Environment config, utilities |
 
 **New Features Added:**
-- 📊 **Admin Dashboard** (`frontend/src/pages/AdminPanelPage.tsx`) - Developer-only analytics and feedback management
+- 📊 **Admin Dashboard** (`frontend/src/pages/AdminPanelPage.tsx`) - Developer-only analytics and feedback management with Recharts
 - 💬 **Feedback System** (`backend/routes/feedback_routes.py`) - User feedback submission and admin management
-- 🗄️ **Enhanced Database** (`backend/services/db_service.py`) - Added developers, user_feedback, and otp_verifications collections
+- 🗄️ **Enhanced Database** (`backend/services/db_service.py`) - 7 collections: users, developers, user_feedback, chat_history, chat_sessions, farming_reports, otp_verifications
 - 📈 **Statistics API** - Comprehensive analytics for users, sessions, reports, and feature usage
-- 🔐 **OTP Verification** (`backend/services/otp_service.py`) - Email-based OTP for login/signup with 10-minute expiry
+- 🔐 **OTP-Based Signup** (`backend/services/otp_service.py`) - Email OTP verification before account creation (10-minute expiry)
+- 💬 **Multi-Session Chat** - Full session management: list, retrieve, and delete individual chat sessions
 - 🔗 **Google Account Linking** (`backend/routes/auth_routes.py`) - Link Google accounts to existing email/password accounts
 - 🎭 **Reusable Modals** (`frontend/src/components/Modals.tsx`) - Centralized modal components (Logout, Delete Account)
 - ⚙️ **Enhanced Settings** (`frontend/src/pages/SettingsPage.tsx`) - Profile management, logout button, password change, Google linking
+- 📄 **Terms & Conditions** (`frontend/src/pages/TermsAndConditionsPage.tsx`) - Dedicated legal page
+- ❓ **FAQ Component** (`frontend/src/components/FAQ.tsx`) - Accordion FAQ section on home page
+- 🎯 **Prompt Scroller** (`frontend/src/components/PromptScroller.tsx`) - Animated example prompts carousel
+- 🔐 **Admin Access Tool** (`backend/make_admin.py`) - CLI utility to grant/revoke developer dashboard access
 
 ---
 
@@ -672,8 +685,9 @@ Production: https://your-domain.com
 
 ### Authentication Endpoints
 
-#### 1. Signup (Email/Password)
+#### 1. Signup (Email/Password with OTP)
 ```http
+# Step 1: Send OTP to email
 POST /api/signup
 Content-Type: application/json
 
@@ -685,6 +699,23 @@ Content-Type: application/json
 
 Response:
 {
+  "message": "OTP sent successfully",
+  "otp_id": "otp_id_here"
+}
+
+# Step 2: Verify OTP to create account
+POST /api/verify-signup-otp
+Content-Type: application/json
+
+{
+  "email": "farmer@example.com",
+  "otp": "123456",
+  "name": "John Farmer",
+  "password": "secure123"
+}
+
+Response:
+{
   "token": "jwt_token_here",
   "user_id": "user_id_here",
   "name": "John Farmer",
@@ -692,14 +723,30 @@ Response:
 }
 ```
 
-#### 2. Login (Email/Password)
+#### 2. Login (Email/Password with OTP)
 ```http
+# Step 1: Initiate login
 POST /api/login
 Content-Type: application/json
 
 {
   "email": "farmer@example.com",
   "password": "secure123"
+}
+
+Response (OTP flow):
+{
+  "message": "OTP sent to your email",
+  "otp_id": "otp_id_here"
+}
+
+# Step 2: Verify OTP to get JWT
+POST /api/verify-login-otp
+Content-Type: application/json
+
+{
+  "email": "farmer@example.com",
+  "otp": "123456"
 }
 
 Response:
@@ -754,12 +801,12 @@ Content-Type: application/json
 
 {
   "message": "How do I grow tomatoes?",
-  "user_id": "user_id_here" (or "trial_user")
+  "chat_id": "existing_chat_id" (optional, for continuing a session)
 }
 
 Response:
 {
-  "response": "AI generated response...",
+  "reply": "AI generated response...",
   "language": "english",
   "input_type": "text",
   "response_type": "AI"
@@ -768,14 +815,11 @@ Response:
 
 #### 2. Voice Chat
 ```http
-POST /api/chat/voice
+POST /api/voice
 Authorization: Bearer <jwt_token> (required)
 Content-Type: multipart/form-data
 
-{
-  "audio": <audio_file>,
-  "user_id": "user_id_here"
-}
+audio: <audio_file>
 
 Response:
 {
@@ -786,16 +830,31 @@ Response:
 }
 ```
 
+#### 3. Chat Session Management
+```http
+# Get all chat sessions
+GET /api/chats
+Authorization: Bearer <jwt_token>
+
+# Get messages for a specific session
+GET /api/chats/<chat_id>
+Authorization: Bearer <jwt_token>
+
+# Delete a specific chat session
+DELETE /api/chats/<chat_id>
+Authorization: Bearer <jwt_token>
+```
+
 ### Report Endpoints
 
 #### Generate Farming Report
 ```http
-POST /api/generate-report
+POST /api/report
 Authorization: Bearer <jwt_token> (optional)
 Content-Type: application/json
 
 {
-  "crop": "Wheat",
+  "cropName": "Wheat",
   "region": "Punjab",
   "language": "hindi",
   "user_id": "user_id_here" (or "trial_user")
@@ -887,7 +946,8 @@ Protected endpoints:
 - `/api/update-profile`
 - `/api/change-password`
 - `/api/create-password`
-- `/api/chat/voice` (voice requires auth)
+- `/api/voice` (voice requires auth)
+- `/api/chats` / `/api/chats/<id>` (session management requires auth)
 
 ---
 
@@ -1493,7 +1553,7 @@ We extend our heartfelt gratitude to:
 
 **Built with ❤️ for Indian Farmers** 🌾
 
-**Last Updated**: January 2026 | **Version**: 2.0
+**Last Updated**: February 2026 | **Version**: 2.0
 
 **A Project Dedicated to Empowering Indian Agriculture Through Technology**
 
