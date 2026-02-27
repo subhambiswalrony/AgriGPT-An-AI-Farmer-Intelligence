@@ -328,6 +328,9 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
 - **scipy** - Scientific computing utilities
 - **sounddevice** - Audio input/output stream handling
 
+### Email
+- **flask-mail** - Flask extension for sending HTML email via SMTP (Gmail)
+
 ### Utilities
 - **python-dotenv** - Environment variable management from .env files
 - **weasyprint** - PDF generation support for farming reports
@@ -357,10 +360,17 @@ backend/
 │   ├── 📄 feedback_routes.py     # User feedback submission & admin feedback management
 │   └── 📁 __pycache__/           # Python compiled bytecode cache
 │
+├── 📁 emails/                     # HTML email templates ({{variable}} placeholder syntax)
+│   ├── 📄 otp.html               # OTP verification email ({{OTP_CODE}})
+│   ├── 📄 welcome.html           # Welcome email sent after successful signup ({{name}})
+│   ├── 📄 password_changed.html  # Password change confirmation email ({{name}})
+│   └── 📄 account_deleted.html   # Account deletion farewell email ({{name}})
+│
 ├── 📁 services/                   # Business logic layer
 │   ├── 📄 __init__.py            # Services package initializer
 │   ├── 📄 auth_service.py        # User authentication logic with Firebase sync & timestamps
 │   ├── 📄 db_service.py          # MongoDB operations (users, developers, feedback, chat, reports)
+│   ├── 📄 email_service.py       # Flask-Mail HTML email delivery with template loader
 │   ├── 📄 firebase_service.py    # Firebase Admin SDK integration & token verification
 │   ├── 📄 llm_service.py         # Google Gemini AI integration & system prompts
 │   ├── 📄 otp_service.py         # OTP generation, validation, and email sending
@@ -393,9 +403,10 @@ backend/
 **Services (Business Logic):**
 - `auth_service.py` - User creation, login validation, password hashing (bcrypt), JWT generation, Google account linking, duplicate prevention
 - `db_service.py` - MongoDB connection, CRUD operations for 6 collections (users, developers, feedback, chat, sessions, reports, otp_verifications)
+- `email_service.py` - Flask-Mail integration; loads HTML templates from `emails/` and sends branded emails for OTP, welcome, password change, and account deletion events
 - `firebase_service.py` - Firebase token verification, Google user sync
 - `llm_service.py` - Gemini AI client, system prompts, response generation
-- `otp_service.py` - Email sending via SMTP, OTP generation, validation, 10-minute expiry
+- `otp_service.py` - OTP generation, validation, 10-minute expiry; delegates email delivery to `email_service.py`
 - `pdf_service.py` - Report to PDF conversion (future feature)
 
 **Configuration:**
@@ -429,6 +440,34 @@ backend/
    - Text chat accessible without token (trial user)
    - Voice features require authentication
    - Trial users not saved to database
+
+## 📧 Email System
+
+AgriGPT sends branded HTML emails using **Flask-Mail** (Gmail SMTP, port 587 / TLS). Email templates live in `backend/emails/` and use `{{VARIABLE}}` placeholder substitution.
+
+| Trigger Event | Template File | Subject |
+|---|---|---|
+| OTP verification (signup / login / reset) | `otp.html` | 🔐 Your AgriGPT OTP Code |
+| Successful signup | `welcome.html` | 🌾 Welcome to AgriGPT... |
+| Password changed | `password_changed.html` | 🔒 Your AgriGPT Password Was Changed Successfully |
+| Account deleted | `account_deleted.html` | We're Sorry to See You Go 🌾 \| AgriGPT |
+
+### Helper functions (`services/email_service.py`)
+- `send_otp_verification_email(to, otp_code)` — called by `otp_service.py`
+- `send_welcome_email(to, name)` — called after OTP-verified signup
+- `send_password_changed_email(to, name)` — called after a successful password change
+- `send_account_deleted_email(to, name)` — called on account deletion
+
+### Flask-Mail configuration (`app.py`)
+```python
+app.config["MAIL_SERVER"]         = "smtp.gmail.com"
+app.config["MAIL_PORT"]           = 587
+app.config["MAIL_USE_TLS"]        = True
+app.config["MAIL_USERNAME"]       = os.getenv("EMAIL_ID")
+app.config["MAIL_PASSWORD"]       = os.getenv("EMAIL_APP_PASSWORD")
+app.config["MAIL_DEFAULT_SENDER"] = ("AgriGPT", os.getenv("EMAIL_ID"))
+```
+> **Note:** `EMAIL_APP_PASSWORD` must be a Gmail App Password (not your regular Gmail password). Enable 2FA on the Google account first, then generate one at [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
 
 ## 🧪 Testing with Postman
 
