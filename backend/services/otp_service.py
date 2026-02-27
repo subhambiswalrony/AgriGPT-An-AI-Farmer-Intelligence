@@ -1,8 +1,6 @@
 import random
-import smtplib
-from email.mime.text import MIMEText
 from datetime import datetime, timedelta
-from utils.config import EMAIL_ID, EMAIL_APP_PASSWORD, OTP_EXPIRY_MINUTES
+from utils.config import OTP_EXPIRY_MINUTES
 from services.db_service import db
 from pymongo import ASCENDING
 
@@ -42,33 +40,19 @@ def generate_otp():
     return str(random.randint(100000, 999999))
 
 def send_email_otp(email, otp):
+    """
+    Send the OTP using the branded HTML template via Flask-Mail.
+    Must be called within a Flask application/request context.
+    """
     try:
-        body = f"""
-🌾 AgriGPT Verification Code 🌾
+        from services.email_service import send_otp_verification_email
 
-Your OTP is: {otp}
-Valid for {OTP_EXPIRY_MINUTES} minutes.
+        print(f"📧 Sending HTML OTP email to {email}")
+        send_otp_verification_email(to=email, otp_code=str(otp))
+        print(f"✅ OTP email sent successfully to {email}")
 
-Do not share this code with anyone.
-"""
-        msg = MIMEText(body)
-        msg["Subject"] = "AgriGPT OTP Verification"
-        msg["From"] = EMAIL_ID
-        msg["To"] = email
-
-        print(f"📧 Attempting to send email to {email}")
-        print(f"📧 Using email: {EMAIL_ID}")
-        
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-        server.login(EMAIL_ID, EMAIL_APP_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        
-        print(f"✅ Email sent successfully to {email}")
-        
     except Exception as e:
-        print(f"❌ Error sending email: {str(e)}")
+        print(f"❌ Error sending OTP email: {str(e)}")
         raise
 
 def create_and_send_otp(email, purpose):
