@@ -1,12 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, MessageSquare, Mail, User, Calendar, RefreshCw, LogOut, FileText, AlertCircle, Trash2, Check, CheckCircle, TrendingUp, PieChart as PieIcon, BarChart2, Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { Shield, MessageSquare, Mail, User, Calendar, RefreshCw, LogOut, FileText, AlertCircle, Trash2, Check, CheckCircle, TrendingUp, TrendingDown, PieChart as PieIcon, BarChart2, Activity, ChevronDown, ChevronUp, Zap, Sprout, Bug, Mic, Award, AlertTriangle, Languages } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, AreaChart, Area, Legend, Brush, Sector
+  PieChart, Pie, Cell, AreaChart, Area, Brush, Sector
 } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS, getApiUrl, getAuthHeaders } from '../config/api';
+import { useTheme } from '../contexts/ThemeContext';
 import Footer from '../components/Footer';
 
 interface Feedback {
@@ -25,6 +26,8 @@ interface Statistics {
     developers: number;
     regular_users: number;
     recent_signups: number;
+    prev_week: number;
+    growth_pct: number;
   };
   feature_usage: {
     chat_sessions: number;
@@ -34,26 +37,75 @@ interface Statistics {
     reports_period: number;
     feedbacks_period: number;
     users_period: number;
-    most_used_feature: {
-      name: string;
-      count: number;
+    most_used_feature: { name: string; count: number; };
+    chat_growth_pct: number;
+    report_growth_pct: number;
+    chats_this_week: number;
+    reports_this_week: number;
+    chats_prev_week: number;
+    reports_prev_week: number;
+  };
+  engagement: {
+    avg_chats_per_user: number;
+    voice_chats: number;
+    voice_pct: number;
+    engagement_score: number;
+    language_dist: { language: string; count: number; }[];
+  };
+  agriculture: {
+    top_crops: { name: string; count: number; }[];
+    top_diseases: { name: string; count: number; }[];
+    crop_max: number;
+    disease_max: number;
+  };
+  feedback_analytics: {
+    total: number;
+    resolved: number;
+    resolution_rate: number;
+  };
+  platform_health: {
+    score: number;
+    color: string;
+    components: {
+      user_growth: number;
+      engagement: number;
+      ai_success: number;
+      feedback: number;
+      report_activity: number;
     };
   };
+  alerts: { type: string; message: string; icon: string; }[];
+  insight_summary: string;
   days_range?: number;
   recent_activity: {
-    last_7_days: {
-      new_users: number;
-      chat_sessions: number;
-      reports: number;
-    };
-    daily: {
-      date: string;
-      new_users: number;
-      chat_sessions: number;
-      reports: number;
-    }[];
+    last_7_days: { new_users: number; chat_sessions: number; reports: number; };
+    daily: { date: string; new_users: number; chat_sessions: number; reports: number; }[];
   };
 }
+
+// Delta badge showing week-over-week % change
+const DeltaBadge = ({ pct }: { pct: number }) => {
+  const pos = pct >= 0;
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs font-bold px-2 py-0.5 rounded-full ${
+      pos ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+           : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+    }`}>
+      {pos ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+      {pos ? '+' : ''}{pct.toFixed(1)}%
+    </span>
+  );
+};
+
+// Custom drag handle for the Brush zoom slider
+const BrushHandle = ({ x = 0, y = 0, height = 36 }: { x?: number; y?: number; height?: number }) => (
+  <g style={{ cursor: 'ew-resize' }}>
+    <rect x={x - 10} y={y + 2} width={20} height={height - 4} rx={5} fill="#10b981" stroke="#fff" strokeWidth={1.5} />
+    {[0.33, 0.5, 0.67].map((f) => (
+      <circle key={f} cx={x} cy={y + 2 + (height - 4) * f} r={2.2} fill="white" opacity={0.9} />
+    ))}
+  </g>
+);
 
 const AdminPanelPage = () => {
   const navigate = useNavigate();
@@ -70,6 +122,7 @@ const AdminPanelPage = () => {
   const [areaRange, setAreaRange] = useState<7 | 14 | 30 | 365>(7);
   const [expandedBar, setExpandedBar] = useState<number | null>(null);
   const [statsRefreshKey, setStatsRefreshKey] = useState(0);
+  const { isDarkMode } = useTheme();
 
   // Memoised derived lists — prevents repeated .filter() on every render
   const activeFeedbacks = useMemo(() => feedbacks.filter(f => f.status !== 'resolved'), [feedbacks]);
@@ -393,6 +446,42 @@ const AdminPanelPage = () => {
             </div>
           </div>
 
+          {/* Insight Summary Banner */}
+          {statistics?.insight_summary && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="mb-6 bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 dark:from-emerald-900/20 dark:via-green-900/20 dark:to-teal-900/20 rounded-2xl p-5 border border-emerald-200 dark:border-emerald-700/40 shadow-sm"
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-2.5 bg-emerald-600 rounded-xl flex-shrink-0 mt-0.5">
+                  <Activity size={18} className="text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Live Platform Insight</p>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  </div>
+                  <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">{statistics.insight_summary}</p>
+                </div>
+                <div className={`flex-shrink-0 text-center px-4 py-3 rounded-xl border ${
+                  statistics.platform_health.color === 'green'  ? 'bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-700/40' :
+                  statistics.platform_health.color === 'yellow' ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/30 dark:border-yellow-700/40' :
+                  'bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-700/40'
+                }`}>
+                  <p className={`text-2xl font-black ${
+                    statistics.platform_health.color === 'green'  ? 'text-green-600 dark:text-green-400' :
+                    statistics.platform_health.color === 'yellow' ? 'text-yellow-600 dark:text-yellow-400' :
+                    'text-red-600 dark:text-red-400'
+                  }`}>{statistics.platform_health.score}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">/ 100</p>
+                  <p className="text-xs font-bold text-gray-600 dark:text-gray-300">Health</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
           {/* Stats Cards - Primary Stats */}
           <div className="grid md:grid-cols-4 gap-4 mb-6">
             <motion.div
@@ -401,7 +490,7 @@ const AdminPanelPage = () => {
               transition={{ delay: 0.1 }}
               className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700/50"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
                   <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Total Users</p>
                   <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
@@ -410,8 +499,9 @@ const AdminPanelPage = () => {
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     +{statistics?.users.recent_signups || 0} this week
                   </p>
+                  {statistics && <div className="mt-2"><DeltaBadge pct={statistics.users.growth_pct} /></div>}
                 </div>
-                <User size={40} className="text-indigo-500" />
+                <User size={36} className="text-indigo-500 mt-1" />
               </div>
             </motion.div>
 
@@ -421,17 +511,18 @@ const AdminPanelPage = () => {
               transition={{ delay: 0.15 }}
               className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700/50"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
                   <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Chat Sessions</p>
                   <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
                     {statistics?.feature_usage.chat_sessions || 0}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    +{statistics?.recent_activity.last_7_days.chat_sessions || 0} this week
+                    +{statistics?.feature_usage.chats_this_week || 0} this week
                   </p>
+                  {statistics && <div className="mt-2"><DeltaBadge pct={statistics.feature_usage.chat_growth_pct} /></div>}
                 </div>
-                <MessageSquare size={40} className="text-blue-500" />
+                <MessageSquare size={36} className="text-blue-500 mt-1" />
               </div>
             </motion.div>
 
@@ -441,17 +532,18 @@ const AdminPanelPage = () => {
               transition={{ delay: 0.2 }}
               className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700/50"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
                   <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Reports Generated</p>
                   <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
                     {statistics?.feature_usage.reports_generated || 0}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    +{statistics?.recent_activity.last_7_days.reports || 0} this week
+                    +{statistics?.feature_usage.reports_this_week || 0} this week
                   </p>
+                  {statistics && <div className="mt-2"><DeltaBadge pct={statistics.feature_usage.report_growth_pct} /></div>}
                 </div>
-                <FileText size={40} className="text-orange-500" />
+                <FileText size={36} className="text-orange-500 mt-1" />
               </div>
             </motion.div>
 
@@ -461,66 +553,114 @@ const AdminPanelPage = () => {
               transition={{ delay: 0.25 }}
               className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl border border-gray-200 dark:border-gray-700/50"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between">
                 <div>
                   <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Total Feedbacks</p>
                   <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
                     {feedbacks.length}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {newFeedbackCount} new
+                    {newFeedbackCount} new · {statistics?.feedback_analytics.resolution_rate || 0}% resolved
                   </p>
+                  {statistics && (
+                    <div className="mt-2">
+                      <span className="text-xs font-semibold text-green-600 dark:text-green-400">
+                        {statistics.feedback_analytics.resolved}/{statistics.feedback_analytics.total} resolved
+                      </span>
+                    </div>
+                  )}
                 </div>
-                <Mail size={40} className="text-green-500" />
+                <Mail size={36} className="text-green-500 mt-1" />
               </div>
             </motion.div>
           </div>
 
-          {/* Secondary Stats - Most Used Feature */}
+          {/* Engagement Metrics Row */}
           {statistics && (
-            <div className="grid md:grid-cols-2 gap-4 mb-8">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-2xl p-6 shadow-lg border border-purple-200 dark:border-purple-700/30"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-purple-700 dark:text-purple-300 text-sm font-medium">Most Used Feature</p>
-                    <p className="text-3xl font-bold text-purple-900 dark:text-purple-100 mt-1 capitalize">
-                      {statistics.feature_usage.most_used_feature.name}
-                    </p>
-                    <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
-                      {statistics.feature_usage.most_used_feature.count} total uses
-                    </p>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="mb-6"
+            >
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Avg Chats / User */}
+                <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 rounded-2xl p-5 border border-purple-200 dark:border-purple-700/30 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1.5 bg-purple-600 rounded-lg"><Zap size={14} className="text-white" /></div>
+                    <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 uppercase tracking-wide">Avg Chats / User</p>
                   </div>
-                  <Shield size={50} className="text-purple-500 dark:text-purple-400" />
+                  <p className="text-3xl font-black text-purple-900 dark:text-purple-100">{statistics.engagement.avg_chats_per_user}</p>
+                  <p className="text-xs text-purple-500 dark:text-purple-400 mt-1">sessions per registered user</p>
                 </div>
-              </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 }}
-                className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/30 dark:to-blue-900/30 rounded-2xl p-6 shadow-lg border border-cyan-200 dark:border-cyan-700/30"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-cyan-700 dark:text-cyan-300 text-sm font-medium">Active This Week</p>
-                    <p className="text-3xl font-bold text-cyan-900 dark:text-cyan-100 mt-1">
-                      {statistics.recent_activity.last_7_days.new_users + 
-                       statistics.recent_activity.last_7_days.chat_sessions + 
-                       statistics.recent_activity.last_7_days.reports}
-                    </p>
-                    <p className="text-sm text-cyan-600 dark:text-cyan-400 mt-1">
-                      Total activities in last 7 days
-                    </p>
+                {/* Voice Adoption */}
+                <div className="bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-900/30 dark:to-blue-900/30 rounded-2xl p-5 border border-sky-200 dark:border-sky-700/30 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1.5 bg-sky-600 rounded-lg"><Mic size={14} className="text-white" /></div>
+                    <p className="text-xs font-semibold text-sky-700 dark:text-sky-300 uppercase tracking-wide">Voice Adoption</p>
                   </div>
-                  <Calendar size={50} className="text-cyan-500 dark:text-cyan-400" />
+                  <p className="text-3xl font-black text-sky-900 dark:text-sky-100">{statistics.engagement.voice_pct}<span className="text-lg font-bold">%</span></p>
+                  <p className="text-xs text-sky-500 dark:text-sky-400 mt-1">{statistics.engagement.voice_chats} voice queries total</p>
                 </div>
-              </motion.div>
-            </div>
+
+                {/* Engagement Score */}
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/30 rounded-2xl p-5 border border-amber-200 dark:border-amber-700/30 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1.5 bg-amber-600 rounded-lg"><Activity size={14} className="text-white" /></div>
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wide">Engagement Score</p>
+                  </div>
+                  <p className="text-3xl font-black text-amber-900 dark:text-amber-100">{statistics.engagement.engagement_score}<span className="text-lg font-bold">%</span></p>
+                  <p className="text-xs text-amber-500 dark:text-amber-400 mt-1">active sessions vs user base</p>
+                </div>
+
+                {/* Feedback Resolution Rate */}
+                <div className="bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/30 dark:to-green-900/30 rounded-2xl p-5 border border-emerald-200 dark:border-emerald-700/30 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1.5 bg-emerald-600 rounded-lg"><Award size={14} className="text-white" /></div>
+                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">Resolution Rate</p>
+                  </div>
+                  <p className="text-3xl font-black text-emerald-900 dark:text-emerald-100">{statistics.feedback_analytics.resolution_rate}<span className="text-lg font-bold">%</span></p>
+                  <p className="text-xs text-emerald-500 dark:text-emerald-400 mt-1">{statistics.feedback_analytics.resolved} of {statistics.feedback_analytics.total} resolved</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Alerts Strip */}
+          {statistics?.alerts && statistics.alerts.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="mb-8"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle size={16} className="text-amber-500" />
+                <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Platform Alerts</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {statistics.alerts.map((alert, i) => (
+                  <div
+                    key={i}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border ${
+                      alert.type === 'warning' ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-900/25 dark:text-amber-300 dark:border-amber-700/40' :
+                      alert.type === 'alert'   ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/25 dark:text-red-300 dark:border-red-700/40' :
+                      alert.type === 'success' ? 'bg-green-50 text-green-800 border-green-200 dark:bg-green-900/25 dark:text-green-300 dark:border-green-700/40' :
+                      'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-900/25 dark:text-blue-300 dark:border-blue-700/40'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                      alert.type === 'warning' ? 'bg-amber-500' :
+                      alert.type === 'alert'   ? 'bg-red-500' :
+                      alert.type === 'success' ? 'bg-green-500' :
+                      'bg-blue-500'
+                    }`} />
+                    {alert.message}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
           )}
 
           {/* ── Analytics Charts Section ── */}
@@ -695,87 +835,140 @@ const AdminPanelPage = () => {
                       </button>
                     </div>
                   </div>
-                  <ResponsiveContainer width="100%" height={220}>
+                  {/* Custom legend row */}
+                  <div className="flex items-center gap-4 mb-3 flex-wrap">
+                    {[
+                      { color: '#10b981', label: 'New Users' },
+                      { color: '#6366f1', label: 'Chat Sessions' },
+                      { color: '#f97316', label: 'Reports' },
+                    ].map(({ color, label }) => (
+                      <div key={label} className="flex items-center gap-1.5">
+                        <span className="inline-block w-3 h-3 rounded-full" style={{ background: color }} />
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <ResponsiveContainer width="100%" height={230}>
                     <AreaChart
                       data={statistics.recent_activity.daily}
-                      margin={{ top: 5, right: 10, left: -10, bottom: 30 }}
+                      margin={{ top: 5, right: 10, left: -10, bottom: 10 }}
                     >
                       <defs>
                         <linearGradient id="areaUsers" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.4} /><stop offset="95%" stopColor="#10b981" stopOpacity={0.0} /></linearGradient>
                         <linearGradient id="areaChats" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} /><stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} /></linearGradient>
                         <linearGradient id="areaReports" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f97316" stopOpacity={0.4} /><stop offset="95%" stopColor="#f97316" stopOpacity={0.0} /></linearGradient>
+                        <linearGradient id="brushGradient" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor={isDarkMode ? '#10b981' : '#059669'} stopOpacity={0.25} />
+                          <stop offset="50%" stopColor={isDarkMode ? '#6366f1' : '#6366f1'} stopOpacity={0.20} />
+                          <stop offset="100%" stopColor={isDarkMode ? '#f97316' : '#f97316'} stopOpacity={0.25} />
+                        </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(156,163,175,0.2)" />
-                      <XAxis dataKey={areaRange === 365 ? 'month' : 'date'} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                      <XAxis
+                        dataKey={areaRange === 365 ? 'month' : 'date'}
+                        tick={{ fontSize: 11, fill: '#6b7280', dy: 4 }}
+                        axisLine={false}
+                        tickLine={false}
+                        interval={areaRange === 7 ? 0 : areaRange === 14 ? 1 : areaRange === 30 ? 4 : 0}
+                        angle={areaRange === 30 ? 0 : -35}
+                        textAnchor={areaRange === 30 ? 'middle' : 'end'}
+                        height={areaRange === 30 ? 30 : 50}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        domain={[0, (dataMax: number) => Math.max(dataMax, 1) + 1]}
+                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
                       <Tooltip
-                        contentStyle={{ background: 'rgba(255,255,255,0.95)', border: '1px solid #e5e7eb', borderRadius: '12px' }}
+                        contentStyle={{ background: isDarkMode ? 'rgba(31,41,55,0.97)' : 'rgba(255,255,255,0.97)', border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb', borderRadius: '12px', color: isDarkMode ? '#f3f4f6' : '#111827' }}
                         cursor={{ stroke: 'rgba(99,102,241,0.2)', strokeWidth: 2 }}
                       />
-                      <Legend wrapperStyle={{ fontSize: '12px' }} />
-                      <Brush dataKey="date" height={22} stroke="#d1d5db" fill="rgba(243,244,246,0.8)" travellerWidth={8} />
+                      <Brush
+                        dataKey={areaRange === 365 ? 'month' : 'date'}
+                        height={36}
+                        gap={4}
+                        stroke={isDarkMode ? '#374151' : '#a7f3d0'}
+                        fill={isDarkMode ? '#1f2937' : '#f0fdf4'}
+                        travellerWidth={20}
+                        traveller={<BrushHandle />}
+                        tickFormatter={(value) => {
+                          if (areaRange === 365) return String(value).slice(0, 3);
+                          try {
+                            const d = new Date(String(value));
+                            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                          } catch { return String(value); }
+                        }}
+                        style={{ fontSize: 10 }}
+                      />
                       <Area type="monotone" dataKey="new_users" name="New Users" stroke="#10b981" strokeWidth={2.5} fill="url(#areaUsers)" dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} />
                       <Area type="monotone" dataKey="chat_sessions" name="Chat Sessions" stroke="#6366f1" strokeWidth={2.5} fill="url(#areaChats)" dot={{ r: 4, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} />
                       <Area type="monotone" dataKey="reports" name="Reports" stroke="#f97316" strokeWidth={2.5} fill="url(#areaReports)" dot={{ r: 4, fill: '#f97316', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} />
                     </AreaChart>
                   </ResponsiveContainer>
+
+                  {/* Zoom hint */}
+                  <div className="mt-3 flex items-center justify-center gap-2 py-1.5 px-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M3 8h10M3 8l2.5-2.5M3 8l2.5 2.5M13 8l-2.5-2.5M13 8l-2.5 2.5" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Drag the green handles to zoom into a specific time range</span>
+                  </div>
                 </div>
 
-                {/* Radial Progress: feature completion */}
+                {/* Platform Health: composite score + component bars */}
                 <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700/50 relative flex flex-col">
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-400 via-pink-500 to-rose-600 rounded-t-2xl" />
                   <div className="flex items-center gap-2 mb-4">
                     <Activity size={20} className="text-purple-500 dark:text-purple-400" />
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">Platform Health</h3>
                   </div>
+
+                  {/* Composite score ring */}
+                  <div className="flex items-center gap-4 mb-5 pb-4 border-b border-gray-100 dark:border-gray-700">
+                    <div className={`w-20 h-20 rounded-full flex flex-col items-center justify-center border-4 flex-shrink-0 ${
+                      statistics.platform_health.color === 'green'  ? 'border-green-500 bg-green-50 dark:bg-green-900/20' :
+                      statistics.platform_health.color === 'yellow' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' :
+                      'border-red-500 bg-red-50 dark:bg-red-900/20'
+                    }`}>
+                      <span className={`text-2xl font-black ${
+                        statistics.platform_health.color === 'green'  ? 'text-green-600 dark:text-green-400' :
+                        statistics.platform_health.color === 'yellow' ? 'text-yellow-600 dark:text-yellow-400' :
+                        'text-red-600 dark:text-red-400'
+                      }`}>{statistics.platform_health.score}</span>
+                      <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400">/100</span>
+                    </div>
+                    <div>
+                      <p className={`text-base font-bold ${
+                        statistics.platform_health.color === 'green'  ? 'text-green-600 dark:text-green-400' :
+                        statistics.platform_health.color === 'yellow' ? 'text-yellow-600 dark:text-yellow-400' :
+                        'text-red-600 dark:text-red-400'
+                      }`}>
+                        {statistics.platform_health.color === 'green' ? '🟢 Healthy' : statistics.platform_health.color === 'yellow' ? '🟡 Moderate' : '🔴 Needs Attention'}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Composite of 5 key factors</p>
+                    </div>
+                  </div>
+
                   <div className="flex-1 space-y-3">
                     {[
-                      {
-                        label: 'User Growth',
-                        pct: Math.min(100, (statistics.users.recent_signups / Math.max(statistics.users.total, 1)) * 100 * 5),
-                        color: 'from-green-400 to-emerald-600',
-                        raw: statistics.users.recent_signups,
-                        total: statistics.users.total,
-                        sub: 'new signups in period',
-                      },
-                      {
-                        label: 'Chat Engagement',
-                        pct: Math.min(100, (statistics.recent_activity.last_7_days.chat_sessions / Math.max(statistics.feature_usage.chat_sessions, 1)) * 100 * 3),
-                        color: 'from-indigo-400 to-purple-600',
-                        raw: statistics.recent_activity.last_7_days.chat_sessions,
-                        total: statistics.feature_usage.chat_sessions,
-                        sub: 'chats this period',
-                      },
-                      {
-                        label: 'Report Activity',
-                        pct: Math.min(100, (statistics.recent_activity.last_7_days.reports / Math.max(statistics.feature_usage.reports_generated, 1)) * 100 * 3),
-                        color: 'from-orange-400 to-red-500',
-                        raw: statistics.recent_activity.last_7_days.reports,
-                        total: statistics.feature_usage.reports_generated,
-                        sub: 'reports this period',
-                      },
-                      {
-                        label: 'Feedback Rate',
-                        pct: Math.min(100, (statistics.feature_usage.feedbacks_received / Math.max(statistics.users.total, 1)) * 100 * 4),
-                        color: 'from-cyan-400 to-blue-600',
-                        raw: statistics.feature_usage.feedbacks_received,
-                        total: statistics.users.total,
-                        sub: 'total feedbacks',
-                      },
+                      { label: 'User Growth',     pct: (statistics.platform_health.components.user_growth   / 30) * 100, score: statistics.platform_health.components.user_growth,    max: 30, color: 'from-green-400 to-emerald-600' },
+                      { label: 'Engagement',      pct: (statistics.platform_health.components.engagement    / 25) * 100, score: statistics.platform_health.components.engagement,     max: 25, color: 'from-indigo-400 to-purple-600' },
+                      { label: 'AI Success',      pct: (statistics.platform_health.components.ai_success    / 20) * 100, score: statistics.platform_health.components.ai_success,     max: 20, color: 'from-blue-400 to-cyan-600' },
+                      { label: 'Feedback Rating', pct: (statistics.platform_health.components.feedback       / 15) * 100, score: statistics.platform_health.components.feedback,       max: 15, color: 'from-orange-400 to-amber-500' },
+                      { label: 'Report Activity', pct: (statistics.platform_health.components.report_activity / 10) * 100, score: statistics.platform_health.components.report_activity, max: 10, color: 'from-pink-400 to-rose-500' },
                     ].map((item, i) => {
                       const isExpanded = expandedBar === (100 + i);
                       return (
-                        <div
-                          key={i}
-                          className="cursor-pointer group"
-                          onClick={() => setExpandedBar(isExpanded ? null : 100 + i)}
-                        >
+                        <div key={i} className="cursor-pointer" onClick={() => setExpandedBar(isExpanded ? null : 100 + i)}>
                           <div className="flex justify-between text-xs mb-1.5">
                             <span className="text-gray-700 dark:text-gray-300 font-medium flex items-center gap-1">
                               {item.label}
                               {isExpanded ? <ChevronUp size={11} className="text-gray-400" /> : <ChevronDown size={11} className="text-gray-400" />}
                             </span>
-                            <span className="text-gray-500 dark:text-gray-400">{Math.round(item.pct)}%</span>
+                            <span className="text-gray-500 dark:text-gray-400">{item.score.toFixed(1)}<span className="text-gray-400">/{item.max}</span></span>
                           </div>
                           <div className="h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                             <motion.div
@@ -795,10 +988,9 @@ const AdminPanelPage = () => {
                                 transition={{ duration: 0.2 }}
                                 className="overflow-hidden"
                               >
-                                <div className="mt-1.5 px-3 py-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg text-xs text-gray-600 dark:text-gray-400 flex justify-between">
-                                  <span>{item.raw} {item.sub}</span>
-                                  <span className="font-medium text-gray-700 dark:text-gray-300">{item.raw} / {item.total} total</span>
-                                </div>
+                                <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 px-1">
+                                  {item.score.toFixed(1)} / {item.max} points ({Math.round(item.pct)}%)
+                                </p>
                               </motion.div>
                             )}
                           </AnimatePresence>
@@ -806,6 +998,129 @@ const AdminPanelPage = () => {
                       );
                     })}
                   </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Agriculture Insights Row */}
+          {statistics && (statistics.agriculture.top_crops.length > 0 || statistics.agriculture.top_diseases.length > 0) && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="mb-8"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-gradient-to-br from-lime-500 to-green-600 rounded-xl">
+                  <Sprout size={18} className="text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Agriculture Insights</h2>
+                <span className="text-xs px-3 py-1 bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-300 rounded-full font-medium">From chat analysis</span>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* Top Crops */}
+                <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700/50 relative">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-lime-400 to-green-500 rounded-t-2xl" />
+                  <div className="flex items-center gap-2 mb-4">
+                    <Sprout size={18} className="text-green-600 dark:text-green-400" />
+                    <h3 className="text-base font-bold text-gray-900 dark:text-white">Most Discussed Crops</h3>
+                  </div>
+                  {statistics.agriculture.top_crops.length === 0 ? (
+                    <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">No crop data yet</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {statistics.agriculture.top_crops.map((crop, i) => (
+                        <div key={crop.name}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                              {i === 0 && <span className="text-yellow-500">🏆</span>}
+                              {crop.name}
+                            </span>
+                            <span className="text-gray-500 dark:text-gray-400 text-xs">{crop.count} queries</span>
+                          </div>
+                          <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${(crop.count / Math.max(statistics.agriculture.crop_max, 1)) * 100}%` }}
+                              transition={{ duration: 1.0, delay: 0.1 + i * 0.1, ease: 'easeOut' }}
+                              className="h-full rounded-full bg-gradient-to-r from-lime-400 to-green-500"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Top Diseases */}
+                <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700/50 relative">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-400 to-rose-500 rounded-t-2xl" />
+                  <div className="flex items-center gap-2 mb-4">
+                    <Bug size={18} className="text-red-500 dark:text-red-400" />
+                    <h3 className="text-base font-bold text-gray-900 dark:text-white">Disease Query Trends</h3>
+                  </div>
+                  {statistics.agriculture.top_diseases.length === 0 ? (
+                    <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">No disease data yet</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {statistics.agriculture.top_diseases.map((disease, i) => (
+                        <div key={disease.name}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="font-medium text-gray-700 dark:text-gray-300">{disease.name}</span>
+                            <span className="text-gray-500 dark:text-gray-400 text-xs">{disease.count} mentions</span>
+                          </div>
+                          <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${(disease.count / Math.max(statistics.agriculture.disease_max, 1)) * 100}%` }}
+                              transition={{ duration: 1.0, delay: 0.1 + i * 0.1, ease: 'easeOut' }}
+                              className="h-full rounded-full bg-gradient-to-r from-red-400 to-rose-500"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Based on keyword analysis of recent user queries. Helps identify seasonal disease patterns.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Language Distribution */}
+                <div className="lg:col-span-1 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700/50 relative">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-400 to-indigo-500 rounded-t-2xl" />
+                  <div className="flex items-center gap-2 mb-4">
+                    <Languages size={18} className="text-violet-500 dark:text-violet-400" />
+                    <h3 className="text-base font-bold text-gray-900 dark:text-white">User Languages</h3>
+                  </div>
+                  {statistics.engagement.language_dist.length === 0 ? (
+                    <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">No language data yet</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {statistics.engagement.language_dist.map((lang, i) => {
+                        const langMax = statistics.engagement.language_dist[0]?.count || 1;
+                        return (
+                          <div key={lang.language}>
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="font-medium text-gray-700 dark:text-gray-300">{lang.language}</span>
+                              <span className="text-gray-500 dark:text-gray-400 text-xs">{lang.count} msgs</span>
+                            </div>
+                            <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(lang.count / langMax) * 100}%` }}
+                                transition={{ duration: 1.0, delay: 0.1 + i * 0.1, ease: 'easeOut' }}
+                                className="h-full rounded-full bg-gradient-to-r from-violet-400 to-indigo-500"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
