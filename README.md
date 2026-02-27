@@ -297,6 +297,7 @@ HomePage.js       #  25 KB - Home page
 | Bcrypt | Latest | Password Hashing |
 | LangDetect | Latest | Language Detection |
 | Torch | Latest | Deep Learning (Whisper backend) |
+| Flask-Mail | Latest | HTML Email Delivery (Gmail SMTP) |
 | Gunicorn | Latest | Production WSGI Server |
 
 ---
@@ -382,10 +383,17 @@ AgriGPT-Chat-Report_System/
 │   │   ├── 📄 __init__.py                # Service package init
 │   │   ├── 📄 auth_service.py            # Authentication logic
 │   │   ├── 📄 db_service.py              # Database operations
+│   │   ├── 📄 email_service.py           # Flask-Mail HTML email delivery
 │   │   ├── 📄 firebase_service.py        # Firebase integration
 │   │   ├── 📄 llm_service.py             # Gemini AI integration
 │   │   ├── 📄 otp_service.py             # OTP handling
 │   │   └── 📄 pdf_service.py             # PDF generation
+│   │
+│   ├── 📁 emails/                        # HTML email templates
+│   │   ├── 📄 otp.html                   # OTP verification email
+│   │   ├── 📄 welcome.html               # Welcome email
+│   │   ├── 📄 password_changed.html      # Password change confirmation
+│   │   └── 📄 account_deleted.html       # Account deletion farewell
 │   │
 │   ├── 📁 utils/                         # Utility functions
 │   │   ├── 📄 __init__.py                # Utils package init
