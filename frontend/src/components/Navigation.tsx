@@ -48,21 +48,31 @@ const Navigation = () => {
 
   // Check authentication status on mount
   React.useEffect(() => {
-    const token = localStorage.getItem('token');
-    const name = localStorage.getItem('name');
-    const email = localStorage.getItem('email');
-    const picture = localStorage.getItem('profilePicture');
+    const syncAuthState = () => {
+      const token = localStorage.getItem('token');
+      const name = localStorage.getItem('name');
+      const email = localStorage.getItem('email');
+      const picture = localStorage.getItem('profilePicture');
 
-    if (token) {
-      setIsAuthenticated(true);
-      setUserName(name || 'User');
-      setUserEmail(email || '');
-      setProfilePicture(picture || '');
-      checkDeveloperStatus();
-    } else {
-      setIsAuthenticated(false);
-      setIsDeveloper(false);
-    }
+      if (token) {
+        setIsAuthenticated(true);
+        setUserName(name || 'User');
+        setUserEmail(email || '');
+        setProfilePicture(picture || '');
+        checkDeveloperStatus();
+      } else {
+        setIsAuthenticated(false);
+        setUserName('');
+        setUserEmail('');
+        setProfilePicture('');
+        setIsDeveloper(false);
+      }
+    };
+
+    syncAuthState();
+
+    window.addEventListener('authChange', syncAuthState);
+    return () => window.removeEventListener('authChange', syncAuthState);
   }, [location]);
 
   // Close mobile menu on resize and handle orientation changes
