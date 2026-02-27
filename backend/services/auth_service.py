@@ -8,6 +8,13 @@ from bson import ObjectId
 # Import the proper OTP service functions
 from services.otp_service import create_and_send_otp as otp_create_and_send
 
+# Import transactional email helpers
+from services.email_service import (
+    send_welcome_email,
+    send_account_deleted_email,
+    send_password_changed_email,
+)
+
 
 def signup_user(email, password, name):
     if user_collection.find_one({"email": email}):
@@ -27,6 +34,12 @@ def signup_user(email, password, name):
 
     result = user_collection.insert_one(user)
     token = generate_token(str(result.inserted_id))
+
+    # Send welcome email (non-blocking — log on failure)
+    try:
+        send_welcome_email(to=email, name=name)
+    except Exception as e:
+        print(f"⚠️ Welcome email failed for {email}: {e}")
 
     return {
         "user_id": str(result.inserted_id),
@@ -142,6 +155,12 @@ def change_user_password(user_id, current_password, new_password):
         if result.modified_count == 0:
             raise Exception("Failed to update password")
 
+        # Send password-changed confirmation email (non-blocking)
+        try:
+            send_password_changed_email(to=user["email"], name=user.get("name", "User"))
+        except Exception as e:
+            print(f"⚠️ Password changed email failed for {user['email']}: {e}")
+
         return {
             "success": True,
             "message": "Password changed successfully"
@@ -172,6 +191,12 @@ def delete_user_account(user_id):
             raise Exception("Failed to delete user account")
 
         print(f"✓ User account deleted successfully: {user_id}")
+
+        # Send goodbye email (non-blocking — account is already gone)
+        try:
+            send_account_deleted_email(to=user["email"], name=user.get("name", "User"))
+        except Exception as e:
+            print(f"⚠️ Account deleted email failed for {user['email']}: {e}")
 
         return {
             "success": True,
@@ -268,15 +293,31 @@ def sync_firebase_user_with_mongodb(firebase_user_info):
         # Check if user exists with this email (but different firebase_uid or no firebase_uid)
         existing_user_with_email = user_collection.find_one({"email": email})
         
-        if existing_user_with_email and "google" not in existing_user_with_email.get("auth_providers", []):
-            # User exists with email/password only - suggest linking accounts
-            print(f"⚠️ Email {email} already registered with password. Suggest account linking.")
-            raise Exception(
-                "An account with this email already exists. "
-                "Please sign in with your email and password, "
-                "then link your Google account in Settings to use both sign-in methods."
+        if existing_user_with_email:
+            # User exists with email/password — auto-link the Google account and log them in
+            print(f"🔗 Linking Google account to existing email/password account for: {email}")
+            user_collection.update_one(
+                {"_id": existing_user_with_email["_id"]},
+                {
+                    "$set": {
+                        "firebase_uid": firebase_uid,
+                        "last_login": datetime.utcnow()
+                    },
+                    "$addToSet": {"auth_providers": provider}
+                }
             )
-        
+            user = user_collection.find_one({"_id": existing_user_with_email["_id"]})
+            user_id = str(user["_id"])
+            token = generate_token(user_id)
+            return {
+                "user_id": user_id,
+                "name": user.get("name", ""),
+                "email": user.get("email", ""),
+                "profilePicture": user.get("profilePicture", ""),
+                "auth_providers": user.get("auth_providers", []),
+                "token": token
+            }
+
         # User doesn't exist, create new user
         print(f"🆕 Creating new user for Firebase UID: {firebase_uid}")
         
@@ -294,6 +335,13 @@ def sync_firebase_user_with_mongodb(firebase_user_info):
         user_id = str(result.inserted_id)
         
         print(f"✅ User created successfully with ID: {user_id}")
+
+        # Send welcome email to new Google user
+        try:
+            send_welcome_email(to=email, name=name or "User")
+            print(f"📧 Welcome email sent to {email}")
+        except Exception as email_err:
+            print(f"⚠️ Welcome email failed: {email_err}")
         
         # Fetch the newly created user document
         user = user_collection.find_one({"_id": result.inserted_id})
