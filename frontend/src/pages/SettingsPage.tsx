@@ -438,6 +438,9 @@ const SettingsPage = () => {
       // Clear all localStorage data
       localStorage.clear();
 
+      // Notify Navigation (and any listener) to clear user state immediately
+      window.dispatchEvent(new Event('authChange'));
+
       // Show loader before redirecting (loader will handle navigation)
       // Note: isLoading state will keep showing loader
 
@@ -461,7 +464,10 @@ const SettingsPage = () => {
   const confirmLogout = () => {
     // Clear all localStorage data
     localStorage.clear();
-    
+
+    // Notify Navigation to clear user state immediately
+    window.dispatchEvent(new Event('authChange'));
+
     // Navigate to home page
     navigate('/');
   };
