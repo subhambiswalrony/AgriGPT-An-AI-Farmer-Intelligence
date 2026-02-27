@@ -14,6 +14,7 @@ from services.db_service import (
     delete_chat_session
 )
 from services.firebase_service import initialize_firebase
+from services.email_service import mail
 
 # Auth
 from routes.auth_routes import auth_bp, token_required, verify_token
@@ -25,6 +26,16 @@ initialize_firebase()
 
 app = Flask(__name__)
 CORS(app, origins="*")
+
+# -------------------- FLASK-MAIL CONFIG --------------------
+import os
+app.config["MAIL_SERVER"]   = "smtp.gmail.com"
+app.config["MAIL_PORT"]     = 587
+app.config["MAIL_USE_TLS"]  = True
+app.config["MAIL_USERNAME"] = os.getenv("EMAIL_ID")
+app.config["MAIL_PASSWORD"] = os.getenv("EMAIL_APP_PASSWORD")
+app.config["MAIL_DEFAULT_SENDER"] = ("AgriGPT", os.getenv("EMAIL_ID"))
+mail.init_app(app)
 
 # Register authentication blueprint
 app.register_blueprint(auth_bp)
