@@ -2,20 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Upload, Camera, CheckCircle, AlertCircle, X, Sparkles, Leaf, FileImage, Zap, Shield, FlaskConical, Lock, LogIn, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config/api';
 
 interface DiagnosisResult {
   disease: string;
   confidence: number;
 }
 
+// DEV  → /api/predict is intercepted by the Vite dev-server proxy and forwarded
+//         directly to the prediction service (raw multipart, no re-encoding).
+// PROD → request goes to the deployed backend which Flask-proxies server-side.
+const PREDICT_API_URL = import.meta.env.DEV
+  ? '/api/predict'
+  : `${API_BASE_URL}/api/predict`;
+
 const UploadPage = () => {
   const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [predictionError, setPredictionError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -25,10 +35,12 @@ const UploadPage = () => {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setSelectedImage(e.target?.result as string);
         setDiagnosis(null);
+        setPredictionError(null);
       };
       reader.readAsDataURL(file);
     }
@@ -48,10 +60,12 @@ const UploadPage = () => {
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
+      setSelectedFile(file);
       const reader = new FileReader();
-      reader.onload = (e) => {
-        setSelectedImage(e.target?.result as string);
+      reader.onload = (ev) => {
+        setSelectedImage(ev.target?.result as string);
         setDiagnosis(null);
+        setPredictionError(null);
       };
       reader.readAsDataURL(file);
     }
@@ -59,27 +73,54 @@ const UploadPage = () => {
 
   const clearImage = () => {
     setSelectedImage(null);
+    setSelectedFile(null);
     setDiagnosis(null);
+    setPredictionError(null);
   };
 
-  const analyzeDiseases = () => {
+  const analyzeDiseases = async () => {
+    if (!selectedFile) return;
+
     setIsAnalyzing(true);
     setDiagnosis(null);
+    setPredictionError(null);
 
-    // Simulate AI analysis
-    setTimeout(() => {
-      const diseases: DiagnosisResult[] = [
-        { disease: 'Powdery Mildew',    confidence: 92 },
-        { disease: 'Leaf Spot Disease', confidence: 87 },
-        { disease: 'Bacterial Blight',  confidence: 83 },
-        { disease: 'Rust Disease',      confidence: 89 },
-        { disease: 'Healthy Leaf',      confidence: 95 },
-      ];
+    const formData = new FormData();
+    formData.append('image', selectedFile, selectedFile.name);
 
-      const randomDiagnosis = diseases[Math.floor(Math.random() * diseases.length)];
-      setDiagnosis(randomDiagnosis);
+    try {
+      const response = await fetch(PREDICT_API_URL, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let detail = '';
+        try { const e = await response.json(); detail = e.error || e.message || ''; } catch { /* ignore */ }
+        if (response.status === 500) {
+          throw new Error('The prediction service is temporarily unavailable. Please try again in a moment.');
+        }
+        if (response.status === 429) {
+          throw new Error('Too many requests. Please wait a moment and try again.');
+        }
+        throw new Error(`Prediction failed${detail ? ': ' + detail : '. Please try again.'}`);
+      }
+
+      const data = await response.json();
+
+      // Normalize response — raw service returns { top, confidence: 0.92 }
+      // Flask proxy returns { disease, confidence: 92.5 }
+      const disease    = (data.disease || data.top || 'Unknown').replace(/_/g, ' ');
+      const rawConf    = data.confidence ?? 0;
+      const confidence = Math.round(rawConf > 1 ? rawConf : rawConf * 100);
+
+      setDiagnosis({ disease, confidence });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+      setPredictionError(message);
+    } finally {
       setIsAnalyzing(false);
-    }, 2500);
+    }
   };
 
   return (
@@ -510,7 +551,7 @@ const UploadPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                         className={`
                         relative overflow-hidden rounded-2xl p-6 
-                        ${diagnosis.disease === 'Healthy Leaf'
+                        ${diagnosis.disease.toLowerCase().includes('healthy')
                             ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 border-2 border-green-300 dark:border-green-700'
                             : 'bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/30 dark:to-red-900/30 border-2 border-orange-300 dark:border-orange-700'
                           }
@@ -518,7 +559,7 @@ const UploadPage = () => {
                       >
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center gap-3">
-                            {diagnosis.disease === 'Healthy Leaf' ? (
+                            {diagnosis.disease.toLowerCase().includes('healthy') ? (
                               <motion.div
                                 initial={{ scale: 0 }}
                                 animate={{ scale: 1, rotate: 360 }}
@@ -564,7 +605,39 @@ const UploadPage = () => {
                     </motion.div>
                   )}
 
-                  {!diagnosis && !isAnalyzing && (
+                  {predictionError && !isAnalyzing && (
+                    <motion.div
+                      key="error"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex flex-col items-center justify-center h-96 text-center px-4"
+                    >
+                      <motion.div
+                        animate={{ rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: 0.5 }}
+                        className="mb-4"
+                      >
+                        <AlertCircle className="w-16 h-16 text-red-500 dark:text-red-400" />
+                      </motion.div>
+                      <p className="text-xl font-semibold text-red-600 dark:text-red-400 mb-2">
+                        Prediction Failed
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
+                        {predictionError}
+                      </p>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={analyzeDiseases}
+                        className="mt-6 px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+                      >
+                        Retry
+                      </motion.button>
+                    </motion.div>
+                  )}
+
+                  {!diagnosis && !isAnalyzing && !predictionError && (
                     <motion.div
                       key="empty"
                       initial={{ opacity: 0 }}
