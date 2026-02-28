@@ -410,6 +410,11 @@ AgriGPT-Chat-Report_System/
 │   ├── 📄 firebase-credentials.json      # Firebase Admin SDK key
 │   └── 📄 README.md                      # Backend docs
 │
+├── 📁 demo_data_tools/                   # MongoDB demo data utilities
+│   ├── 📄 generate_demo_data.py          # Insert ~1,100 demo users + 45,000+ messages
+│   ├── 📄 clear_demo_data.py             # Safely remove all demo data (@demo.agrigpt)
+│   └── 📄 requirements.txt              # Standalone deps (pymongo, bcrypt)
+│
 ├── 📁 preview/                           # Demo files
 │   └── 📹 AgriGPT 2.0.mp4                # Project demo video
 │
@@ -435,6 +440,43 @@ AgriGPT-Chat-Report_System/
                                                  │     AI     │
                                                  └────────────┘
 ```
+
+---
+
+## 🗄️ Demo Data Tools
+
+The `demo_data_tools/` directory contains standalone scripts for populating and cleaning up the MongoDB database with realistic Indian agricultural demo data. Useful for testing the admin dashboard without real user traffic.
+
+### Scripts
+
+| Script | Purpose |
+|---|---|
+| `generate_demo_data.py` | Inserts ~1,100 demo users, ~3,300 chat sessions, ~45,000 messages, ~560 reports, 320 feedback entries |
+| `clear_demo_data.py` | Safely deletes **only** demo documents (email ends with `@demo.agrigpt`) — real data is never touched |
+
+### Usage
+
+```bash
+cd demo_data_tools
+pip install -r requirements.txt
+
+# Populate
+python generate_demo_data.py
+
+# Clean up (interactive confirmation)
+python clear_demo_data.py
+
+# Clean up without prompt (CI)
+python clear_demo_data.py --force
+```
+
+> Both scripts read `backend/.env` directly for `MONGO_URI` and `MONGO_DB` — no Flask app import required.
+
+### Safety Guarantees
+- All generated users have emails ending with `@demo.agrigpt`
+- All generated names are prefixed with `Demo_`
+- Every delete in `clear_demo_data.py` uses an explicit `@demo.agrigpt` filter — no unfiltered deletes
+- Real users and data are **never** modified
 
 ---
 
