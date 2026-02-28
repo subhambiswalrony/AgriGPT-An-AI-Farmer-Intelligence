@@ -11,6 +11,30 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       exclude: ['lucide-react'],
     },
+    // Dev server proxy — intercepts /api/predict before it reaches Flask,
+    // forwarding the browser's raw multipart request directly to the prediction
+    // service. This avoids CORS and Python-requests re-encoding issues.
+    server: {
+      proxy: {
+        '/api/predict': {
+          target: 'https://agri-gpt-disease-prediction.onrender.com',
+          changeOrigin: true,
+          secure: false,
+          rewrite: () => '/predict',
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq, req) => {
+              console.log('[Vite Proxy] →', req.method, req.url, '——>', proxyReq.host + proxyReq.path);
+            });
+            proxy.on('proxyRes', (proxyRes) => {
+              console.log('[Vite Proxy] ←', proxyRes.statusCode, proxyRes.statusMessage);
+            });
+            proxy.on('error', (err) => {
+              console.error('[Vite Proxy] ERROR:', err.message);
+            });
+          },
+        },
+      },
+    },
     // Performance optimizations for mobile
     build: {
       // Split chunks for better caching
