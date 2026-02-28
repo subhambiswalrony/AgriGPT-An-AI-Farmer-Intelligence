@@ -80,7 +80,15 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
 - Fallback data for English, Hindi, Odia
 - Reports saved to database for authenticated users
 
-### 7. **Chat History Management**
+### 7. **AI Plant Disease Detection**
+- `/api/predict` endpoint acts as a server-side proxy to an external ML model
+  - External service: `https://agri-gpt-disease-prediction.onrender.com/predict`
+- Accepts leaf image uploads (JPEG / PNG, up to 10 MB)
+- Returns `{ "disease": "<label>", "confidence": <0–100> }` to frontend
+- Authentication required (premium feature)
+- In development, Vite dev-server proxies directly to avoid CORS re-encoding
+
+### 8. **Chat History Management**
 - Complete conversation history stored in MongoDB
 - Tracks input types (text vs voice)
 - Tracks response types (AI vs Fallback)
@@ -88,7 +96,7 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
 - Timestamped messages for all interactions
 - Separate collections for chats and farming reports
 
-### 8. **Database Integration**
+### 9. **Database Integration**
 - MongoDB for data persistence
 - Database: `agrigpt`
 - Collections:
@@ -187,6 +195,13 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
 - `GET /api/reports` - Get all saved farming reports (authenticated users only)
   - Headers: `Authorization: Bearer <token>` (required)
   - Returns: Array of saved report objects with timestamps
+
+### Disease Prediction (Authenticated)
+- `POST /api/predict` - Proxy to external AI disease-prediction model
+  - Headers: `Authorization: Bearer <token>` (required)
+  - Body: `multipart/form-data` with `image` file (leaf images only — JPEG/PNG up to 10 MB)
+  - Proxies to `https://agri-gpt-disease-prediction.onrender.com/predict`
+  - Returns: `{ "disease": "Tomato Leaf Blight", "confidence": 92.5 }`
 
 ### Feedback System (Trial & Authenticated)
 - `POST /api/feedback` - Submit user feedback
@@ -324,6 +339,7 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
 
 ### Audio Processing
 - **pydub** - Audio file format conversion and processing
+- **speechrecognition** - Google Speech Recognition fallback library
 - **numpy** - Numerical computing for audio data
 - **scipy** - Scientific computing utilities
 - **sounddevice** - Audio input/output stream handling
@@ -333,6 +349,7 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
 
 ### Utilities
 - **python-dotenv** - Environment variable management from .env files
+- **requests** - HTTP client used in the `/api/predict` disease-prediction proxy
 - **weasyprint** - PDF generation support for farming reports
 - **gunicorn** - Production WSGI server for deployment
 - **torch** - PyTorch deep learning framework (required by Faster Whisper)
