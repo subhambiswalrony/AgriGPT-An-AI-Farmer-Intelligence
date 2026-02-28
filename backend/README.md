@@ -414,7 +414,27 @@ backend/
 - `.env` - API keys (Gemini, Firebase), MongoDB URI, JWT secret, email credentials
 - `config.py` - Loads environment variables, provides configuration constants
 
-## 🔐 Authentication Flow
+## �️ Demo Data Tools
+
+The root-level `demo_data_tools/` directory provides standalone scripts for seeding and cleaning the MongoDB database with realistic Indian agricultural demo data — useful for testing the admin dashboard without real user traffic.
+
+| Script | What it does |
+|---|---|
+| `generate_demo_data.py` | Inserts ~1,100 demo users, ~3,300 chat sessions, ~45,000 chat messages, ~560 farming reports, 320 feedback entries |
+| `clear_demo_data.py` | Safely deletes **only** documents whose email ends with `@demo.agrigpt` — real data is never touched |
+
+```bash
+cd demo_data_tools
+pip install -r requirements.txt
+
+python generate_demo_data.py          # seed
+python clear_demo_data.py             # cleanup (interactive)
+python clear_demo_data.py --force     # cleanup (no prompt)
+```
+
+Both scripts load `backend/.env` directly for `MONGO_URI` / `MONGO_DB` — no Flask app import required.
+
+## �🔐 Authentication Flow
 
 1. **Signup** (OTP-Verified):
    - Step 1: POST `/api/signup` with `{email, password, name}` → Sends OTP to email
