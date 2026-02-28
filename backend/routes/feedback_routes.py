@@ -226,16 +226,21 @@ def get_admin_statistics():
         fb_resolution_rate = round((resolved_fb / max(total_feedbacks, 1)) * 100, 1)
 
         # ── Platform health composite score (0–100) ───────────────────────────
-        # User Growth component (30%): +15 base, +15 for positive growth
+        # User Growth component (30%): +15 base, ±15 for week-over-week growth
         growth_component      = min(30.0, max(5.0, 15.0 + (user_growth_pct / 100.0) * 15.0))
-        # Engagement (25%): active chats vs user base (1 chat/user = 25pp)
+        # Engagement (25%): active chats vs user base this week (1 chat/user/week = full score)
         engagement_component  = min(25.0, (chats_this_week / max(total_users, 1)) * 25.0)
-        # AI success proxy (20%): inverse of voice proportion (text = AI served)
-        ai_success_component  = min(20.0, (1.0 - min(voice_pct / 100.0, 0.5)) * 20.0)
-        # Feedback resolution (15%)
-        feedback_component    = min(15.0, fb_resolution_rate / 100.0 * 15.0)
-        # Report activity (10%): any reports this week
-        report_component      = min(10.0, (reports_this_week / max(max(total_reports, 1), 3)) * 10.0)
+        # AI success (20%): avg lifetime chats per user — 5+ sessions/user = full score
+        # (was: inverse-voice which wrongly penalised voice feature usage)
+        ai_success_component  = min(20.0, (avg_chats_per_user / 5.0) * 20.0)
+        # Feedback resolution (15%): neutral 10pts when no feedback exists yet,
+        # otherwise scales with resolution rate (was: 0pts for 0 feedbacks)
+        feedback_component    = (10.0 if total_feedbacks == 0
+                                 else min(15.0, fb_resolution_rate / 100.0 * 15.0))
+        # Report activity (10%): compares this-week reports vs 10% of user base as target
+        # (was: vs all-time total which made old platforms always score near 0)
+        expected_weekly_reports = max(total_users // 10, 1)
+        report_component      = min(10.0, (reports_this_week / expected_weekly_reports) * 10.0)
 
         health_score = round(
             growth_component + engagement_component +
