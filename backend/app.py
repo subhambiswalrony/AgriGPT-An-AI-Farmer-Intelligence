@@ -217,6 +217,57 @@ def report_history():
         return jsonify({"error": "Internal server error"}), 500
 
 
+# -------------------- DISEASE PREDICTION PROXY --------------------
+@app.route("/api/predict", methods=["POST"])
+def predict_proxy():
+    import requests as req
+    import io
+    try:
+        if 'image' not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+
+        file       = request.files['image']
+        file_bytes = file.read()                     # read fully before stream closes
+        filename   = file.filename or 'image.jpg'
+        mimetype   = file.mimetype or 'image/jpeg'
+
+        # Omit explicit mimetype — let requests auto-set Content-Type so the
+        # multipart boundary is constructed identically to how Postman does it
+        files = {'image': (filename, io.BytesIO(file_bytes))}
+
+        response = req.post(
+            'https://agri-gpt-disease-prediction.onrender.com/predict',
+            files=files,
+            timeout=60
+        )
+
+        print(f"🌿 Predict proxy status: {response.status_code}")
+        print(f"🌿 Predict proxy body:   {response.text[:300]}")
+
+        if not response.ok:
+            return jsonify({"error": f"Prediction service error: {response.text}"}), response.status_code
+
+        raw = response.json()
+
+        # Normalise: the prediction service returns {"top": "<label>", "confidence": 0.92}
+        # Map to the shape the frontend expects: {"disease": "<label>", "confidence": 92}
+        disease    = raw.get('top') or raw.get('disease') or 'Unknown'
+        confidence = raw.get('confidence', 0)
+
+        return jsonify({
+            "disease":    disease,
+            "confidence": round(confidence * 100, 1)   # 0.9252 → 92.5
+        }), 200
+
+    except req.exceptions.Timeout:
+        return jsonify({"error": "Prediction service timed out. Please try again."}), 504
+    except req.exceptions.ConnectionError:
+        return jsonify({"error": "Could not reach prediction service."}), 502
+    except Exception as e:
+        print(f"❌ Error in predict_proxy: {str(e)}")
+        return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
+
+
 # -------------------- RUN SERVER --------------------
 if __name__ == "__main__":
     # app.run(
