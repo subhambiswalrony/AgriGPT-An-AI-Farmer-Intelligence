@@ -184,7 +184,16 @@ HomePage.js       #  25 KB - Home page
    - Delete account option with confirmation
    - Track authentication methods used
 
-5. **Feedback System**
+5. **AI Plant Disease Detection**
+   - Upload a clear photo of a plant leaf for instant AI-powered diagnosis
+   - Detects diseases with confidence score (%)
+   - Powered by external ML model (`agri-gpt-disease-prediction.onrender.com`)
+   - Flask proxy (`/api/predict`) handles server-side forwarding in production
+   - Vite dev-server proxy handles direct forwarding in development
+   - Works on leaf images only (JPEG/PNG, up to 10 MB)
+   - Requires authentication (premium feature)
+
+6. **Feedback System**
    - Submit feedback, suggestions, or report issues directly from the app
    - Share your farming experience and help improve AgriGPT
    - Contribute to making the platform better for all farmers
@@ -279,6 +288,7 @@ HomePage.js       #  25 KB - Home page
 | React Router | 7.6.3 | Client-side Routing |
 | React Markdown | 10.1.0 | Markdown Rendering |
 | jsPDF | 3.0.4 | PDF Generation |
+| html2canvas | 1.4.1 | HTML to Canvas (PDF export) |
 | Recharts | 3.7.0 | Admin Statistics Charts |
 | Lucide React | 0.344.0 | Icon Library |
 
@@ -298,6 +308,8 @@ HomePage.js       #  25 KB - Home page
 | LangDetect | Latest | Language Detection |
 | Torch | Latest | Deep Learning (Whisper backend) |
 | Flask-Mail | Latest | HTML Email Delivery (Gmail SMTP) |
+| SpeechRecognition | Latest | Speech Recognition Fallback |
+| Requests | Latest | HTTP Client (Disease Prediction Proxy) |
 | Gunicorn | Latest | Production WSGI Server |
 
 ---
@@ -337,7 +349,7 @@ AgriGPT-Chat-Report_System/
 │   │   │   ├── 📄 FeedbackPage.tsx       # Feedback form
 │   │   │   ├── 📄 AdminPanelPage.tsx     # Admin dashboard (developer-only)
 │   │   │   ├── 📄 TermsAndConditionsPage.tsx # Terms and conditions
-│   │   │   ├── 📄 UploadPage.tsx         # File upload (future)
+│   │   │   ├── 📄 UploadPage.tsx         # AI plant disease detection (leaf image upload)
 │   │   │   ├── 📄 ResetPasswordPage.tsx  # Password reset
 │   │   │   └── 📄 NotFoundPage.tsx       # 404 error page
 │   │   │
@@ -722,6 +734,7 @@ Before you begin, ensure you have the following installed:
 - ❓ **FAQ Component** (`frontend/src/components/FAQ.tsx`) - Accordion FAQ section on home page
 - 🎯 **Prompt Scroller** (`frontend/src/components/PromptScroller.tsx`) - Animated example prompts carousel
 - 🔐 **Admin Access Tool** (`backend/make_admin.py`) - CLI utility to grant/revoke developer dashboard access
+- 🌿 **AI Plant Disease Detection** (`frontend/src/pages/UploadPage.tsx`) - Leaf image upload with AI diagnosis (proxied via `/api/predict` to external ML model at `agri-gpt-disease-prediction.onrender.com`; requires authentication)
 
 ---
 
@@ -921,6 +934,25 @@ Response:
   "language": "hindi"
 }
 ```
+
+### Disease Prediction Endpoint
+
+```http
+POST /api/predict
+Authorization: Bearer <jwt_token> (required)
+Content-Type: multipart/form-data
+
+image: <leaf_image_file>  (JPEG/PNG, up to 10 MB, leaves only)
+
+Response:
+{
+  "disease": "Tomato Leaf Blight",
+  "confidence": 92.5
+}
+```
+
+> In **development**, Vite proxies `/api/predict` directly to the ML service.  
+> In **production**, Flask forwards the request server-side via `requests`.
 
 ### User Profile Endpoints
 
