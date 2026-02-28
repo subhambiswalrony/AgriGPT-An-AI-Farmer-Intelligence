@@ -1,0 +1,6 @@
+# Demo Data Tools — standalone dependencies
+# These are already present in backend/requirements.txt
+# Install via:  pip install -r requirements.txt
+pymongo>=4.0
+bcrypt>=4.0
+python-dotenv>=1.0   # optional — scripts also parse .env manually
