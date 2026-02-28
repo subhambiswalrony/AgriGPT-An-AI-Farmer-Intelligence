@@ -18,3 +18,4 @@ torch
 weasyprint
 langdetect
 gunicorn
+requests
