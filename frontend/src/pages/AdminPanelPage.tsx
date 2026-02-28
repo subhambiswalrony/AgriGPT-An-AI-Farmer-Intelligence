@@ -1187,7 +1187,7 @@ const AdminPanelPage = () => {
                 </motion.div>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 overscroll-y-contain [will-change:transform]">
                 {activeFeedbacks.map((feedback) => (
                   <div
                     key={feedback._id}
@@ -1308,7 +1308,7 @@ const AdminPanelPage = () => {
                 </motion.div>
               </div>
             ) : (
-              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 overscroll-y-contain [will-change:transform]">
                 {resolvedFeedbacks.map((feedback) => (
                   <div
                     key={feedback._id}
