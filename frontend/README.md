@@ -434,7 +434,7 @@ frontend/
 │   │   ├── 📄 SettingsPage.tsx        # User profile & settings management
 │   │   ├── 📄 TeamPage.tsx            # Team member information display (currently disabled)
 │   │   ├── 📄 TermsAndConditionsPage.tsx # Terms and conditions page
-│   │   ├── 📄 UploadPage.tsx          # File upload (future feature)
+│   │   ├── 📄 UploadPage.tsx          # AI plant disease detection (leaf image upload)
 │   │   └── 📄 WeatherPage.tsx         # Weather dashboard with forecasts
 │   │
 │   └── 📁 utils/                      # Utility functions
@@ -494,7 +494,7 @@ frontend/
 - `performance.ts` - Mobile detection, performance utilities
 
 **Build Configuration:**
-- `vite.config.ts` - Build optimizations, chunk splitting, code splitting
+- `vite.config.ts` - Build optimizations, chunk splitting, code splitting; dev-server proxy for `/api/predict` → `agri-gpt-disease-prediction.onrender.com/predict`
 - `tsconfig.json` - TypeScript compiler options, strict mode
 - `tailwind.config.js` - Tailwind theme customization, dark mode config
 - `package.json` - React 18.3.1, TypeScript 5.5.3, Vite 5.4.2, Firebase 11.10.0
@@ -549,6 +549,13 @@ All API calls are configured in `src/config/api.ts`:
 - `POST /api/report` - Generate farming report (optional auth)
 - `GET /api/reports` - Get saved report history (protected)
 
+### Disease Prediction Endpoint
+- `POST /api/predict` - AI plant disease detection via leaf image (protected)
+  - In dev: Vite proxy forwards directly to ML service (avoids CORS)
+  - In prod: Flask backend proxies via `requests`
+  - Body: `multipart/form-data` with `image` field (JPEG/PNG, ≤10 MB)
+  - Returns: `{ "disease": "<label>", "confidence": <0-100> }`
+
 ### API Configuration
 
 API base URL is configured via environment variable:
@@ -570,7 +577,7 @@ Authorization: Bearer <jwt_token>
 - `/auth` - Redirects to `/login`
 - `/chat` - Chat interface (trial mode available)
 - `/report` - Farming report generation
-- `/upload` - File upload page (future)
+- `/upload` - AI plant disease detection (leaf image upload, authenticated users only)
 - `/weather` - Weather dashboard
 - `/settings` - User settings and profile management (protected)
 - `/feedback` - User feedback form
@@ -593,6 +600,7 @@ Features that require authentication:
 - Report history
 - Profile picture upload
 - Password management
+- AI plant disease detection (Upload page)
 
 If user is not authenticated, they can still use:
 - Text chat (trial mode)
@@ -854,7 +862,6 @@ Vercel provides the best experience for Vite apps with automatic builds and depl
 - [ ] Push notifications for weather alerts
 - [ ] Chat export functionality
 - [ ] Voice output (Text-to-Speech)
-- [ ] Image-based crop disease detection
 - [ ] Real-time notifications
 
 ## 🤝 Contributing
