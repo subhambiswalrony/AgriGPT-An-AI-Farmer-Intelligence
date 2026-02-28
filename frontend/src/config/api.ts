@@ -26,6 +26,9 @@ export const API_ENDPOINTS = {
   CHANGE_PASSWORD: '/api/change-password',
   DELETE_ACCOUNT: '/api/delete-account',
   
+  // Disease Prediction
+  PREDICT: '/api/predict',
+
   // Feedback
   FEEDBACK: '/api/feedback',
   ADMIN_FEEDBACKS: '/api/admin/feedbacks',
