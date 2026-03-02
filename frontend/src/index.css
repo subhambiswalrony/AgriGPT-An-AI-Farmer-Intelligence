@@ -5,6 +5,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent white flash on fast scroll — browser fills unpainted tiles with html/body background */
+html,
+body {
+  background-color: #eef2ff; /* matches light-mode page gradient (indigo-50) */
+}
+
+html.dark,
+html.dark body {
+  background-color: #022c22; /* matches dark-mode page gradient (emerald-950) */
+}
+
 @layer utilities {
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
