@@ -108,12 +108,18 @@ A modern, high-performance React + TypeScript frontend for the AgriGPT agricultu
 
 ### 8. **Admin Dashboard** (Developer-only)
 - **Developer authentication** via separate `developers` collection
-- **Comprehensive statistics dashboard**:
-  - Total users with weekly growth trends
-  - Chat sessions and activity metrics
-  - Reports generated with weekly breakdown
-  - Most used feature analytics with visual indicators
-  - Weekly activity summary across all features
+- **Comprehensive statistics dashboard** powered by `analytics_routes.py` scanning **8 MongoDB collections**:
+  - **Users analytics**: Total, active, returning, and inactive user counts
+  - **Feature usage**: Totals for chat, voice, reports, weather searches, and disease uploads
+  - **Engagement metrics**: Voice %, language distribution across 13+ Indian languages, response-type distribution (AI vs fallback), average messages per session
+  - **Agriculture insights**: Top crops and disease keywords extracted from chat history
+  - **Report analytics**: Top crops/regions in generated reports, report language distribution
+  - **Feedback analytics**: Status breakdown (new / in-progress / resolved)
+  - **Upload analytics**: Disease prediction totals, top diseases, confidence distribution
+  - **Weather analytics**: Trial vs registered searches, unique cities
+  - **Platform health**: 0–100 composite health score with up to 10 data-driven alerts
+  - **Time-series activity**: Daily and monthly trend charts for all features
+  - Supports configurable time windows: last 7, 14, 30, or 365 days
 - **Advanced feedback management**:
   - Side-by-side layout comparing active vs resolved feedbacks
   - Filter feedbacks by status (new, in-progress, resolved)
@@ -320,6 +326,9 @@ dist/
    # Backend API URL
    VITE_API_URL=http://localhost:5000
    
+   # Weather & Soil API URL — proxied through Flask backend (no separate port needed)
+   VITE_WEATHER_API_BASE_URL=http://localhost:5000
+   
    # Firebase Configuration (Get from Firebase Console)
    VITE_FIREBASE_API_KEY=your_firebase_api_key
    VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
@@ -404,10 +413,12 @@ frontend/
 │   │   ├── 📄 Footer.tsx              # Footer with links and copyright
 │   │   ├── 📄 LazyImage.tsx           # Lazy loading image component with Intersection Observer
 │   │   ├── 📄 Loader.tsx              # Loading spinner/animation component
+│   │   ├── 📄 HourlyWeatherAnalysis.tsx # 24-hour temperature & humidity chart with AI farming insights (irrigation window, avoid window)
 │   │   ├── 📄 Modals.tsx              # Reusable modal components (Logout, Delete Account)
 │   │   ├── 📄 Navigation.tsx          # Top navigation bar with theme toggle & auth status
 │   │   ├── 📄 PromptScroller.tsx      # Animated scrolling example prompts carousel
-│   │   └── 📄 ScrollToTop.tsx         # Scroll to top on route change utility
+│   │   ├── 📄 ScrollToTop.tsx         # Scroll to top on route change utility
+│   │   └── 📄 TutorialModal.tsx       # Reusable step-by-step onboarding/tutorial modal with FAB trigger
 │   │
 │   ├── 📁 config/                     # Configuration files
 │   │   ├── 📄 api.ts                  # API base URL, axios configuration, endpoint definitions
@@ -460,8 +471,10 @@ frontend/
 - `LazyImage.tsx` - Optimized image loading with blur placeholder & Intersection Observer
 - `Loader.tsx` - Loading spinner shown during async operations and route changes
 - `Modals.tsx` - Reusable modal components (LogoutConfirmModal, DeleteAccountModal)
+- `HourlyWeatherAnalysis.tsx` - Recharts `LineChart` displaying 24-hour interpolated temperature & humidity from the weather microservice; derives AI farm insights (best irrigation window, avoid window, peak/low temps) from the hourly data
 - `PromptScroller.tsx` - Horizontally scrolling carousel of example farming prompts
 - `ScrollToTop.tsx` - Automatically scrolls to top on route navigation
+- `TutorialModal.tsx` - Generic multi-step onboarding modal (portal-rendered, fixed 480 px height); accepts `steps[]`, `pageTitle`, `accentColor`; rendered via a floating action button; used across WeatherPage, ChatPage, etc.
 
 **Configuration:**
 - `api.ts` - Axios instance, API_BASE_URL from .env, all endpoint paths
@@ -485,7 +498,7 @@ frontend/
 - `SettingsPage.tsx` - Profile edit, password change, profile picture upload, logout button with confirmation modal, Google account linking, OTP verification
 - `TeamPage.tsx` - Team member cards with photos and roles (currently disabled in routing)
 - `FeedbackPage.tsx` - Feedback form submission with email validation
-- `AdminPanelPage.tsx` - Developer-only dashboard with Recharts statistics, feedback management, side-by-side layout, delete confirmation modal
+- `AdminPanelPage.tsx` - Developer-only dashboard; Recharts-driven statistics from 8 MongoDB collections (users, chat, reports, feedback, disease predictions, weather, engagement, health score), configurable time window (7/14/30/365 days), side-by-side feedback management, delete confirmation modal
 - `TermsAndConditionsPage.tsx` - Full terms and conditions legal page
 - `NotFoundPage.tsx` - 404 error page with navigation back home
 
