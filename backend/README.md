@@ -102,7 +102,13 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
 - Collections:
   - `users` - User accounts with authentication details, Firebase UID, and auth providers
   - `chat_history` - Complete conversation logs with metadata
+  - `chat_sessions` - Chat session groupings per user
   - `farming_reports` - Generated farming reports with crop/region/language data
+  - `user_feedback` - User feedback submissions with status tracking
+  - `developers` - Admin panel access control
+  - `otp_verifications` - Email OTP tokens with TTL auto-expiry
+  - `disease_predictions` - Plant disease detection results (disease label, confidence, user, timestamp)
+  - `weather_searches` - Weather & soil lookup history including full API output (city, user, weather_output, timestamp)
 - User schema includes:
   - `firebase_uid` - Firebase user identifier (for Google Sign-In users)
   - `auth_providers` - Array of authentication methods (["google"], ["local"], or ["google", "local"])
@@ -229,14 +235,42 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
   - Returns: `{ "success": true, "message": "Feedback status updated" }`
   - Adds `resolved_at` timestamp when marked as resolved
 
-- `GET /api/admin/statistics` - Get comprehensive statistics
+- `GET /api/admin/statistics?days=7` - Get comprehensive analytics (supports `days=7|14|30|365`)
   - Headers: `Authorization: Bearer <token>` (required, must be developer)
-  - Returns: Statistics object with:
-    - `users`: Total users, new users (last 7 days)
-    - `chat_sessions`: Total sessions, recent activity
-    - `reports`: Total and weekly report generation
-    - `feature_usage`: Most used feature with count
-    - `recent_activity`: Detailed 7-day activity breakdown
+  - Scans **8 MongoDB collections**: `users`, `chat_history`, `chat_sessions`, `farming_reports`, `user_feedback`, `developers`, `disease_predictions`, `weather_searches`
+  - Returns a rich statistics object with:
+    - `users`: Total, active, returning, inactive counts
+    - `feature_usage`: Per-feature totals (chat, voice, reports, weather, uploads)
+    - `engagement`: Voice %, language distribution, response-type distribution, avg messages/session
+    - `agriculture`: Top crops and disease keywords extracted from chat
+    - `report_analytics`: Top crops/regions in reports, report language distribution
+    - `feedback_analytics`: Feedback breakdown by status (new / in-progress / resolved)
+    - `upload_analytics`: Disease prediction totals, top diseases, confidence distribution
+    - `weather_analytics`: Trial vs registered searches, unique cities
+    - `platform_health`: 0–100 composite health score
+    - `alerts`: Up to 10 data-driven alert rules (low engagement, high fallback rate, etc.)
+    - `insight_summary`: Plain-English summary of key metrics
+    - `recent_activity`: Daily and monthly time-series data including all features
+
+### Weather & Soil (Proxy — no auth required)
+> These endpoints are served by Flask but **proxied internally** to the Node.js weather server (port 3020). The frontend only needs to know about port **5000**.
+
+- `GET /api/agriculture-data` - Full weather + 7-day forecast + AI soil/groundwater analysis
+  - Query: `?city=Delhi` or `?zipCode=110001`
+  - Also persists the search (city + full output) to MongoDB for admin analytics
+  - Returns: Weather, forecast, and AI-generated soil/groundwater JSON
+
+- `GET /api/hourly-weather` - 24-hour interpolated temperature & humidity chart data
+  - Query: `?lat=28.6&lon=77.2`
+  - Returns: Array of 24 `{hour, label, temperature, humidity}` data points
+
+- `GET /api/current-weather` - Lightweight current weather for navbar widget
+  - Query: `?lat=X&lon=Y`
+  - Returns: `{ location, temperature, condition, icon }`
+
+- `POST /api/expert-recommendation` - AI farming advisory paragraph
+  - Body: `{ "location": "...", "weather": {...}, "soil": {...} }`
+  - Returns: `{ "recommendation": "AI-generated expert farming advice" }`
 
 ## 🛠️ Setup Instructions
 
@@ -363,6 +397,7 @@ backend/
 ├── 📄 voice.py                    # Voice input handler with Faster Whisper STT (offline)
 ├── 📄 report.py                   # AI-powered farming report generation with Gemini AI
 ├── 📄 make_admin.py               # CLI utility to grant/revoke developer (admin panel) access
+├── 📄 node_server.py              # Launches weather_and_soil_analysis/server.js as a managed child process
 ├── 📄 test_db.py                  # Database connection testing utility script
 ├── 📄 requirements.txt            # Python dependencies and versions
 ├── 📄 .env                        # Environment variables (create this - not in repo)
@@ -374,7 +409,9 @@ backend/
 │   ├── 📄 __init__.py            # Routes package initializer
 │   ├── 📄 auth_routes.py         # Authentication & profile endpoints (dual auth support)
 │   ├── 📄 otp_routes.py          # OTP verification and email routes
-│   ├── 📄 feedback_routes.py     # User feedback submission & admin feedback management
+│   ├── 📄 feedback_routes.py     # User feedback CRUD: submit, list, delete, update status
+│   ├── 📄 analytics_routes.py    # Developer access check + comprehensive 8-collection admin statistics
+│   ├── 📄 weather_routes.py      # Flask proxy blueprint — forwards /api/agriculture-data, /api/hourly-weather, /api/current-weather, /api/expert-recommendation to Node.js (port 3020)
 │   └── 📁 __pycache__/           # Python compiled bytecode cache
 │
 ├── 📁 emails/                     # HTML email templates ({{variable}} placeholder syntax)
@@ -399,7 +436,14 @@ backend/
 │   ├── 📄 config.py              # Environment configuration loader from .env
 │   └── 📁 __pycache__/           # Python compiled bytecode cache
 │
+├── 📁 weather_and_soil_analysis/  # Standalone Node.js weather & soil microservice (port 3020)
+│   ├── 📄 server.js               # Express server — 4 API endpoints, Gemini soil cache
+│   ├── 📄 package.json            # Node deps: express, axios, cors, dotenv, express-rate-limit
+│   └── 📄 .env                    # OPENWEATHER_API_KEY, GEMINI_API_KEY, PORT (create this)
+│
 └── 📁 __pycache__/                # Root-level Python compiled bytecode cache
+
+📌 **Note:** The `weather_and_soil_analysis/` directory is a **separate Node.js microservice** — see the [Weather & Soil Microservice](#-weather--soil-microservice) section below.
 ```
 
 ### Key Files Explained
@@ -410,16 +454,19 @@ backend/
 - `voice.py` - Processes voice audio files, Whisper transcription, language detection from audio
 - `report.py` - Generates comprehensive farming reports with 4 sections in user's language
 - `make_admin.py` - CLI utility to grant or revoke developer (admin panel) access for a user
+- `node_server.py` - Starts and manages the `weather_and_soil_analysis/server.js` Node.js process as a subprocess of Flask; streams its stdout to the Python console; registers `atexit`/`SIGINT`/`SIGTERM` handlers so the Node server is always killed cleanly when Flask exits
 - `test_db.py` - Test MongoDB connectivity, view collections, test CRUD operations
 
 **Routes (API Endpoints):**
 - `auth_routes.py` - `/api/signup`, `/api/login`, `/api/verify-login-otp`, `/api/verify-signup-otp`, `/api/auth/google`, `/api/link-google`, `/api/update-profile`, `/api/change-password`, `/api/create-password`, `/api/delete-account`
 - `otp_routes.py` - `/api/send-otp`, `/api/verify-otp`, `/api/reset-password`
-- `feedback_routes.py` - `/api/feedback`, `/api/check-developer`, `/api/admin/feedbacks`, `/api/admin/feedback/<id>`, `/api/admin/feedback/<id>/status`, `/api/admin/statistics`
+- `feedback_routes.py` - Pure CRUD: `/api/feedback` (submit), `/api/admin/feedbacks` (list + 7-day auto-delete), `/api/admin/feedback/<id>` (delete), `/api/admin/feedback/<id>/status` (update status)
+- `analytics_routes.py` - `/api/check-developer` (developer access check), `/api/admin/statistics` (comprehensive analytics across 8 MongoDB collections)
+- `weather_routes.py` - Thin proxy blueprint; forwards all 4 weather/soil endpoints from Flask (port 5000) to the internal Node.js server (port 3020). Also saves `/api/agriculture-data` searches (city + full output JSON) to MongoDB via `save_weather_search` for admin analytics.
 
 **Services (Business Logic):**
 - `auth_service.py` - User creation, login validation, password hashing (bcrypt), JWT generation, Google account linking, duplicate prevention
-- `db_service.py` - MongoDB connection, CRUD operations for 6 collections (users, developers, feedback, chat, sessions, reports, otp_verifications)
+- `db_service.py` - MongoDB connection, CRUD operations for 9 collections (users, developers, user_feedback, chat_history, chat_sessions, farming_reports, otp_verifications, disease_predictions, weather_searches) — 8 of these are scanned by `analytics_routes.py` (otp_verifications excluded)
 - `email_service.py` - Flask-Mail integration; loads HTML templates from `emails/` and sends branded emails for OTP, welcome, password change, and account deletion events
 - `firebase_service.py` - Firebase token verification, Google user sync
 - `llm_service.py` - Gemini AI client, system prompts, response generation
@@ -450,6 +497,62 @@ python clear_demo_data.py --force     # cleanup (no prompt)
 ```
 
 Both scripts load `backend/.env` directly for `MONGO_URI` / `MONGO_DB` — no Flask app import required.
+
+## 🌦️ Weather & Soil Microservice
+
+The `weather_and_soil_analysis/` directory is a **standalone Node.js/Express server** (port **3020**) that powers all weather, soil analysis, and AI farming advisory features. It is **completely independent** from the Flask backend — you must start it separately.
+
+### Technology Stack
+
+| Component | Details |
+|---|---|
+| Runtime | Node.js |
+| Framework | Express 5.2.1 |
+| AI | Google Gemini 2.5-flash (soil & farming advisory generation) |
+| Weather Data | OpenWeatherMap API (current + 7-day forecast + 3-hour slots) |
+| Geocoding | Nominatim / OpenStreetMap (free — no API key required) |
+| Rate Limiting | `express-rate-limit` middleware on all endpoints |
+
+### API Endpoints
+
+| Method | Endpoint | Query / Body | Description |
+|---|---|---|---|
+| `GET` | `/api/agriculture-data` | `?city=Delhi` or `?zipCode=110001` | Full weather + 7-day forecast + AI soil/groundwater analysis JSON |
+| `GET` | `/api/hourly-weather` | `?lat=28.6&lon=77.2` | 24-hour linearly interpolated temperature & humidity for chart display |
+| `GET` | `/api/current-weather` | `?lat=X&lon=Y` | Lightweight `{location, temperature, condition, icon}` for navbar widget |
+| `POST` | `/api/expert-recommendation` | Body: `{location, weather, soil}` | AI-generated expert farming advisory paragraph |
+
+### Setup
+
+1. **Navigate to the directory**
+   ```bash
+   cd "Major Project/backend/weather_and_soil_analysis"
+   ```
+
+2. **Install Node.js dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Create `.env` file** in `weather_and_soil_analysis/`
+   ```env
+   OPENWEATHER_API_KEY=your_openweathermap_api_key
+   GEMINI_API_KEY=your_gemini_api_key
+   PORT=3020
+   ```
+
+4. **Start the server**
+   ```bash
+   node server.js
+   # Server starts at http://localhost:3020
+   ```
+
+### Design Notes
+- **Soil cache**: AI-generated soil/groundwater data is cached in memory per location for **24 hours** to minimise Gemini API calls
+- **Hourly interpolation**: OWM 3-hour forecast slots are linearly interpolated to produce smooth 24-point hourly charts
+- **Retry logic**: `safeRequest()` wrapper retries up to **3 times** with a 2-second delay on HTTP 429 rate-limit errors
+- **Frontend hook**: `src/hooks/useWeather.ts` calls `/api/current-weather`; falls back to free open-meteo + Nominatim if the Node server is unreachable
+- **Flask proxy**: All weather endpoints are exposed through Flask (port 5000) via `routes/weather_routes.py` — the frontend only needs `VITE_WEATHER_API_BASE_URL=http://localhost:5000` (same as the main backend)
 
 ## �🔐 Authentication Flow
 
@@ -776,7 +879,43 @@ MongoDB Database: `agrigpt`
 }
 ```
 
-### Key Schema Features
+### 7. OTP Verifications Collection (`otp_verifications`)
+```json
+{
+  "_id": ObjectId("..."),
+  "email": "user@example.com",
+  "otp": "123456",
+  "purpose": "password_reset",
+  "expires_at": ISODate("2025-01-07T10:35:00.000Z"),
+  "verified": false,
+  "created_at": ISODate("2025-01-07T10:30:00.000Z")
+  // TTL index auto-deletes 24 hours after expires_at
+}
+```
+
+### 8. Disease Predictions Collection (`disease_predictions`)
+```json
+{
+  "_id": ObjectId("..."),
+  "user_id": "user_object_id",  // References users._id (authenticated users only)
+  "disease": "Tomato Leaf Blight",     // Label returned by the ML model
+  "confidence": 92.5,                  // Confidence percentage (0–100)
+  "image_name": "leaf_photo.jpg",      // Original uploaded filename (optional)
+  "timestamp": ISODate("2025-01-10T08:15:00.000Z")
+}
+```
+
+### 9. Weather Searches Collection (`weather_searches`)
+```json
+{
+  "_id": ObjectId("..."),
+  "input": { "city": "Delhi" },         // City name searched
+  "user_id": "user_object_id",          // null for trial/unauthenticated users
+  "user_type": "registered",            // "registered" | "trial"
+  "weather_output": { /* full Node.js API response */ },  // Cached full output
+  "timestamp": ISODate("2025-01-10T09:00:00.000Z")
+}
+```
 - **Timezone-aware timestamps**: All dates stored in UTC using `datetime.now(timezone.utc)`
 - **Flexible authentication**: Users can have Google-only, password-only, or dual authentication
 - **Optional fields**: `password` and `firebase_uid` are optional based on auth method
@@ -786,6 +925,8 @@ MongoDB Database: `agrigpt`
 - **Response metadata**: Chat history includes input type and response type for analytics
 - **Feedback tracking**: Status and resolution timestamps for feedback management
 - **Developer access**: Separate collection for admin panel authentication
+- **Disease analytics**: Every authenticated disease scan is persisted for usage tracking
+- **Weather analytics**: Every agriculture-data lookup (city + full output) is persisted for both trial and registered users
 
 ## 🎯 Core Functionality Details
 
