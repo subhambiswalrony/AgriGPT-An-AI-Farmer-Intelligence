@@ -17,10 +17,9 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api/predict': {
-          target: 'https://agri-gpt-disease-prediction.onrender.com',
+          target: 'http://localhost:5000',
           changeOrigin: true,
           secure: false,
-          rewrite: () => '/predict',
           configure: (proxy) => {
             proxy.on('proxyReq', (proxyReq, req) => {
               console.log('[Vite Proxy] →', req.method, req.url, '——>', proxyReq.host + proxyReq.path);
