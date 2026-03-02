@@ -23,6 +23,9 @@ wheels/
 .installed.cfg
 *.egg
 
+#JavaScript
+node_modules/
+
 # Environment variables
 .env
 
