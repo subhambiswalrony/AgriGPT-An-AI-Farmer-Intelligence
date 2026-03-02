@@ -2,6 +2,9 @@
 // Use environment variable or fallback to localhost for development
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
+// Weather & Soil Analysis – proxied through the Python backend (no separate port needed)
+export const WEATHER_API_BASE_URL = import.meta.env.VITE_WEATHER_API_BASE_URL || 'http://localhost:5000';
+
 export const API_ENDPOINTS = {
   // Authentication
   LOGIN: '/api/login',
