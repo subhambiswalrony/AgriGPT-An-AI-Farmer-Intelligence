@@ -60,11 +60,13 @@ except ImportError:
 client = MongoClient(MONGO_URI)
 db     = client[MONGO_DB]
 
-users_col    = db.users
-sessions_col = db.chat_sessions
-history_col  = db.chat_history
-reports_col  = db.farming_reports
-feedback_col = db.user_feedback
+users_col       = db.users
+sessions_col    = db.chat_sessions
+history_col     = db.chat_history
+reports_col     = db.farming_reports
+feedback_col    = db.user_feedback
+predictions_col = db.disease_predictions
+weather_col     = db.weather_searches
 
 # ── Identification Marker ─────────────────────────────────────────────────
 DEMO_DOMAIN = "@demo.agrigpt"
@@ -117,6 +119,42 @@ CROPS = [
 ]
 
 CROP_DISPLAY = {c: c.capitalize() for c in CROPS}
+
+# Plant disease labels returned by the prediction service (Upload Page)
+PLANT_DISEASE_LABELS = [
+    "Tomato Late Blight",
+    "Tomato Early Blight",
+    "Tomato Leaf Mold",
+    "Tomato Bacterial Spot",
+    "Tomato Mosaic Virus",
+    "Potato Late Blight",
+    "Potato Early Blight",
+    "Potato Healthy",
+    "Rice Blast",
+    "Rice Brown Spot",
+    "Rice Leaf Scald",
+    "Wheat Stripe Rust",
+    "Wheat Stem Rust",
+    "Wheat Powdery Mildew",
+    "Maize Gray Leaf Spot",
+    "Maize Common Rust",
+    "Maize Northern Leaf Blight",
+    "Cotton Bacterial Blight",
+    "Cotton Leaf Curl Virus",
+    "Groundnut Early Leaf Spot",
+    "Groundnut Late Leaf Spot",
+    "Mango Powdery Mildew",
+    "Mango Anthracnose",
+    "Healthy Leaf",
+]
+
+# Image filenames that might be uploaded
+IMAGE_FILENAMES = [
+    "leaf_photo.jpg", "crop_scan.jpg", "field_image.png",
+    "plant_leaf.jpg", "diseased_leaf.jpg", "crop_photo.jpeg",
+    "farm_upload.jpg", "leaf_closeup.png", "IMG_{n}.jpg",
+    "WhatsApp Image {n}.jpeg", "scan_{n}.jpg", "upload_{n}.png",
+]
 
 # Diseases tracked by admin's keyword scanner
 DISEASES = [
@@ -351,7 +389,7 @@ def _batch_insert(collection, documents: list, label: str, batch_size: int = 500
 # ── Stage 1 — Users ───────────────────────────────────────────────────────
 
 def generate_users(count: int = 1100) -> list:
-    print(f"\n📌 Stage 1/5 — Generating {count:,} demo users …")
+    print(f"\n📌 Stage 1/7 — Generating {count:,} demo users …")
     # Hash password ONCE and reuse — bcrypt is intentionally slow
     hashed_pw = bcrypt.hashpw(b"Demo@AgriGPT2024", bcrypt.gensalt())
 
@@ -381,7 +419,7 @@ def generate_users(count: int = 1100) -> list:
 # ── Stage 2 — Chat Sessions ───────────────────────────────────────────────
 
 def generate_chat_sessions(user_ids: list, target: int = 3300) -> list:
-    print(f"\n📌 Stage 2/5 — Generating ~{target:,} chat sessions …")
+    print(f"\n📌 Stage 2/7 — Generating ~{target:,} chat sessions …")
     sessions_per_user = max(2, target // len(user_ids))
     docs = []
 
@@ -409,7 +447,7 @@ def generate_chat_sessions(user_ids: list, target: int = 3300) -> list:
 # ── Stage 3 — Chat Messages ───────────────────────────────────────────────
 
 def generate_chat_messages(user_ids: list) -> None:
-    print(f"\n📌 Stage 3/5 — Generating chat messages …")
+    print(f"\n📌 Stage 3/7 — Generating chat messages …")
 
     # Retrieve inserted session IDs grouped by user_id
     session_docs = list(
@@ -470,7 +508,7 @@ def generate_chat_messages(user_ids: list) -> None:
 # ── Stage 4 — Farming Reports ─────────────────────────────────────────────
 
 def generate_reports(user_ids: list, target: int = 560) -> None:
-    print(f"\n📌 Stage 4/5 — Generating {target:,}+ farming reports …")
+    print(f"\n📌 Stage 4/7 — Generating {target:,}+ farming reports …")
 
     # Give ~55% of users at least one report (realistic)
     reporter_count = min(len(user_ids), target)
@@ -500,10 +538,110 @@ def generate_reports(user_ids: list, target: int = 560) -> None:
     _batch_insert(reports_col, docs, "farming reports")
 
 
+# ── Stage 6 — Disease Predictions ───────────────────────────────────────────
+
+def generate_disease_predictions(user_ids: list, target: int = 850) -> None:
+    print(f"\n📌 Stage 6/7 — Generating {target:,} disease prediction records …")
+
+    # Only a subset of registered users use the Upload Page (realistic)
+    scanner_count = min(len(user_ids), int(target * 0.75))
+    scanners = random.sample(user_ids, scanner_count)
+
+    docs = []
+    for _ in range(target):
+        uid        = random.choice(scanners)
+        disease    = random.choice(PLANT_DISEASE_LABELS)
+        confidence = round(random.uniform(68.0, 99.5), 1)
+        n          = random.randint(1000, 9999)
+        tmpl       = random.choice(IMAGE_FILENAMES)
+        image_name = tmpl.format(n=n) if "{n}" in tmpl else tmpl
+
+        docs.append({
+            "user_id":    uid,
+            "disease":    disease,
+            "confidence": confidence,
+            "image_name": image_name,
+            "timestamp":  _aware_utc_ago(30),
+        })
+
+    _batch_insert(predictions_col, docs, "disease predictions")
+
+
+# ── Stage 7 — Weather Searches ────────────────────────────────────────────
+
+# Minimal but realistic weather output structure (mirrors Node server response)
+def _fake_weather_output(city: str) -> dict:
+    temp     = round(random.uniform(18.0, 42.0), 1)
+    humidity = random.randint(35, 95)
+    rainfall = round(random.uniform(0.0, 25.0), 1)
+    return {
+        "location": city,
+        "weather": {
+            "temperature":   temp,
+            "feels_like":    round(temp - random.uniform(1, 4), 1),
+            "humidity":      humidity,
+            "description":   random.choice([
+                "clear sky", "few clouds", "scattered clouds",
+                "light rain", "moderate rain", "overcast clouds",
+                "mist", "haze",
+            ]),
+            "wind_speed":    round(random.uniform(2.0, 18.0), 1),
+            "rainfall_mm":   rainfall,
+        },
+        "soil": {
+            "moisture":     random.randint(20, 80),
+            "temperature":  round(temp - random.uniform(2, 8), 1),
+            "ph":           round(random.uniform(5.5, 7.8), 1),
+            "nitrogen":     random.randint(20, 90),
+            "phosphorus":   random.randint(10, 60),
+            "potassium":    random.randint(15, 75),
+        },
+        "advisory": f"Weather conditions in {city} are {'favourable' if humidity < 70 else 'humid'}. "
+                    f"Monitor crops for moisture-related diseases.",
+    }
+
+
+def generate_weather_searches(user_ids: list, target: int = 1400) -> None:
+    print(f"\n📌 Stage 7/7 — Generating {target:,} weather search records …")
+
+    # ~35% trial users, ~65% registered users
+    n_trial      = int(target * 0.35)
+    n_registered = target - n_trial
+
+    docs = []
+
+    # Trial user searches — no user_id
+    for _ in range(n_trial):
+        city = random.choice(DISTRICTS)
+        docs.append({
+            "input":          {"city": city},
+            "user_id":        None,
+            "user_type":      "trial",
+            "_is_demo":       True,          # marker for safe cleanup
+            "weather_output": _fake_weather_output(city),
+            "timestamp":      _aware_utc_ago(30),
+        })
+
+    # Registered user searches
+    for _ in range(n_registered):
+        uid  = random.choice(user_ids)
+        city = random.choice(DISTRICTS)
+        docs.append({
+            "input":          {"city": city},
+            "user_id":        uid,
+            "user_type":      "registered",
+            "weather_output": _fake_weather_output(city),
+            "timestamp":      _aware_utc_ago(30),
+        })
+
+    random.shuffle(docs)   # mix trial and registered timestamps naturally
+    _batch_insert(weather_col, docs, "weather searches")
+
+
 # ── Stage 5 — Feedback ────────────────────────────────────────────────────
 
 def generate_feedback(target: int = 320) -> None:
-    print(f"\n📌 Stage 5/5 — Generating {target:,} feedback entries …")
+    print(f"\n📌 Stage 5/7 — Generating {target:,} feedback entries …")
 
     statuses        = ["new", "in-progress", "resolved"]
     status_weights  = [0.50, 0.20, 0.30]
@@ -579,6 +717,8 @@ def main() -> None:
     generate_chat_messages(user_ids)
     generate_reports(user_ids, target=560)
     generate_feedback(target=320)
+    generate_disease_predictions(user_ids, target=850)
+    generate_weather_searches(user_ids, target=1400)
 
     # Final summary
     print(f"\n{separator}")
@@ -589,6 +729,8 @@ def main() -> None:
     print(f"  Chat messages        : ~45,000+ (with crop/disease keywords)")
     print(f"  Farming reports      : ~560+")
     print(f"  Feedback entries     : 320")
+    print(f"  Disease predictions  : ~850    (registered users, Upload Page)")
+    print(f"  Weather searches     : ~1,400  (35% trial · 65% registered)")
     print()
     print("  The admin dashboard will now reflect real + demo data combined.")
     print("  To remove all demo data safely, run:  python clear_demo_data.py")

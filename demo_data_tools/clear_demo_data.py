@@ -78,11 +78,13 @@ def main() -> None:
         client.close()
         sys.exit(1)
 
-    users_col    = db.users
-    sessions_col = db.chat_sessions
-    history_col  = db.chat_history
-    reports_col  = db.farming_reports
-    feedback_col = db.user_feedback
+    users_col       = db.users
+    sessions_col    = db.chat_sessions
+    history_col     = db.chat_history
+    reports_col     = db.farming_reports
+    feedback_col    = db.user_feedback
+    predictions_col = db.disease_predictions
+    weather_col     = db.weather_searches
 
     # ── Step 1 — Discover demo user IDs ──────────────────────────────────
     print("🔍 Discovering demo data …")
@@ -101,6 +103,9 @@ def main() -> None:
     n_messages     = history_col.count_documents(uid_filter)
     n_reports      = reports_col.count_documents(uid_filter)
     n_feedback     = feedback_col.count_documents(EMAIL_FILTER)
+    n_predictions  = predictions_col.count_documents(uid_filter)
+    n_weather_reg  = weather_col.count_documents(uid_filter)
+    n_weather_trial= weather_col.count_documents({"user_id": None, "_is_demo": True})
 
     # Verify zero real-user overlap (safety assertion)
     real_user_count = users_col.count_documents(
@@ -112,6 +117,9 @@ def main() -> None:
     print(f"   Chat messages           : {n_messages:,}")
     print(f"   Farming reports         : {n_reports:,}")
     print(f"   Feedback entries        : {n_feedback:,}")
+    print(f"   Disease predictions     : {n_predictions:,}")
+    print(f"   Weather searches (reg.) : {n_weather_reg:,}")
+    print(f"   Weather searches (trial): {n_weather_trial:,}")
     print(f"\n   Real users (untouched)  : {real_user_count:,}")
     print(f"   Real data is SAFE       : ✅")
 
@@ -144,13 +152,25 @@ def main() -> None:
     r3 = reports_col.delete_many(uid_filter)
     print(f"   ✅ Deleted {r3.deleted_count:>8,} farming reports")
 
-    # 4d. Feedback (identified by email domain — may have user_id=None)
-    r4 = feedback_col.delete_many(EMAIL_FILTER)
-    print(f"   ✅ Deleted {r4.deleted_count:>8,} feedback entries")
+    # 4d. Disease predictions (registered users only)
+    r4 = predictions_col.delete_many(uid_filter)
+    print(f"   ✅ Deleted {r4.deleted_count:>8,} disease predictions")
 
-    # 4e. Demo users — LAST, after all dependent data is removed
-    r5 = users_col.delete_many(EMAIL_FILTER)
-    print(f"   ✅ Deleted {r5.deleted_count:>8,} demo users")
+    # 4e. Weather searches — registered users
+    r5 = weather_col.delete_many(uid_filter)
+    print(f"   ✅ Deleted {r5.deleted_count:>8,} weather searches (registered)")
+
+    # 4f. Weather searches — trial users (identified by _is_demo marker, safe cleanup)
+    r6 = weather_col.delete_many({"user_id": None, "_is_demo": True})
+    print(f"   ✅ Deleted {r6.deleted_count:>8,} weather searches (trial)")
+
+    # 4g. Feedback (identified by email domain — may have user_id=None)
+    r7 = feedback_col.delete_many(EMAIL_FILTER)
+    print(f"   ✅ Deleted {r7.deleted_count:>8,} feedback entries")
+
+    # 4h. Demo users — LAST, after all dependent data is removed
+    r8 = users_col.delete_many(EMAIL_FILTER)
+    print(f"   ✅ Deleted {r8.deleted_count:>8,} demo users")
 
     # ── Step 5 — Post-deletion integrity check ────────────────────────────
     print("\n🔎 Post-deletion verification …")
