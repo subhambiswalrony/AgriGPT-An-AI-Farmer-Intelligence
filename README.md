@@ -312,6 +312,18 @@ HomePage.js       #  25 KB - Home page
 | Requests | Latest | HTTP Client (Disease Prediction Proxy) |
 | Gunicorn | Latest | Production WSGI Server |
 
+### Weather & Soil Microservice
+
+| Technology | Version | Purpose |
+|------------|---------|--------|
+| Node.js | 16+ | Runtime |
+| Express | 5.2.1 | Web Framework |
+| Axios | 1.13.6 | HTTP Client |
+| express-rate-limit | 8.0.1 | Rate Limiting |
+| OpenWeatherMap API | - | Real-time Weather & Forecast |
+| Gemini 2.5-flash | - | AI Soil Analysis & Expert Recommendations |
+| Nominatim (OSM) | - | Geocoding (city/zip → coordinates) |
+
 ---
 
 ## 🏗️ Project Architecture
@@ -333,9 +345,11 @@ AgriGPT-Chat-Report_System/
 │   │   │   ├── 📄 FAQ.tsx                # FAQ accordion component
 │   │   │   ├── 📄 LazyImage.tsx          # Optimized image loading
 │   │   │   ├── 📄 Loader.tsx             # Loading spinner
+│   │   │   ├── 📄 HourlyWeatherAnalysis.tsx # 24-hour temp & humidity chart with farming insights
 │   │   │   ├── 📄 Modals.tsx             # Reusable modal components (Logout, Delete Account)
 │   │   │   ├── 📄 PromptScroller.tsx     # Scrolling example prompts carousel
-│   │   │   └── 📄 ScrollToTop.tsx        # Scroll behavior utility
+│   │   │   ├── 📄 ScrollToTop.tsx        # Scroll behavior utility
+│   │   │   └── 📄 TutorialModal.tsx      # Multi-step onboarding modal with FAB trigger
 │   │   │
 │   │   ├── 📁 pages/                     # Page components (lazy loaded)
 │   │   │   ├── 📄 HomePage.tsx           # Landing page
@@ -385,11 +399,18 @@ AgriGPT-Chat-Report_System/
 │   ├── 📄 .env                           # Environment variables
 │   └── 📄 README.md                      # Frontend docs
 │
-├── 📁 backend/                           # Flask Backend API
+├── 📁 backend/                           # Flask Backend API (Python)
+│   ├── 📁 weather_and_soil_analysis/        # Node.js microservice — weather, soil & AI recommendations
+│   │   ├── 📄 server.js                     # Express server (port 3020) with 4 API endpoints
+│   │   ├── 📄 package.json                  # Node deps: express, axios, cors, dotenv, express-rate-limit
+│   │   └── 📄 .env                          # OPENWEATHER_API_KEY, GEMINI_API_KEY, PORT
+│   │
 │   ├── 📁 routes/                        # API route handlers
 │   │   ├── 📄 auth_routes.py             # Auth endpoints
 │   │   ├── 📄 otp_routes.py              # OTP verification
-│   │   └── 📄 feedback_routes.py         # Feedback & admin endpoints
+│   │   ├── 📄 feedback_routes.py         # Feedback CRUD (submit, list, delete, update status)
+│   │   ├── 📄 analytics_routes.py        # Developer check + comprehensive 8-collection admin statistics
+│   │   └── 📄 weather_routes.py          # Flask proxy → Node.js weather server (port 3020)
 │   │
 │   ├── 📁 services/                      # Business logic layer
 │   │   ├── 📄 __init__.py                # Service package init
@@ -416,6 +437,7 @@ AgriGPT-Chat-Report_System/
 │   ├── 📄 voice.py                       # Voice input handler
 │   ├── 📄 report.py                      # Report generation
 │   ├── 📄 make_admin.py                  # Grant/revoke developer access utility
+│   ├── 📄 node_server.py                 # Spawns & manages weather Node.js server as Flask child process
 │   ├── 📄 test_db.py                     # DB test utility
 │   ├── 📄 requirements.txt               # Python dependencies
 │   ├── 📄 .env                           # Environment variables
@@ -436,22 +458,88 @@ AgriGPT-Chat-Report_System/
 ### Architecture Flow
 
 ```
-┌─────────────┐         ┌──────────────┐         ┌─────────────┐
-│   Browser   │────────▶│   Frontend   │────────▶│   Backend   │
-│             │  HTTPS  │  (React App) │   API   │  (Flask)    │
-└─────────────┘         └──────────────┘         └─────────────┘
-                              │                         │
-                              │                         │
-                        ┌─────▼─────┐            ┌─────▼──────┐
-                        │  Firebase │            │  MongoDB   │
-                        │   Auth    │            │  Database  │
-                        └───────────┘            └────────────┘
-                                                       │
-                                                 ┌─────▼──────┐
-                                                 │   Gemini   │
-                                                 │     AI     │
-                                                 └────────────┘
+┌─────────────┐         ┌──────────────┐
+│   Browser   │────────▶│   Frontend   │
+└─────────────┘  HTTPS  │  (React/Vite)│
+                         └──────┬───────┘
+                                │
+               ┌────────────────┴────────────────┐
+               │ Flask REST API                   │ Node.js REST API
+               │ (port 5000)                      │ (port 3020)
+               ▼                                  ▼
+        ┌──────────────┐                 ┌────────────────────┐
+        │  Backend     │                 │  Weather & Soil    │
+        │  (Flask)     │                 │  Microservice      │
+        └──────┬───────┘                 │  (Node.js/Express) │
+               │                         └────────┬───────────┘
+        ┌──────┴──────────┐                       │
+        ▼                 ▼            ┌───────────┼───────────┐
+   ┌─────────┐    ┌──────────────┐    ▼           ▼           ▼
+   │ MongoDB │    │  Firebase    │  ┌──────────┐ ┌──────────┐ ┌───────────┐
+   │Database │    │  Auth (JWT)  │  │OpenWeather │ Gemini   │ │ Nominatim │
+   └────┬────┘    └──────────────┘  │  Map API │ │AI (Soil) │ │ Geocoding │
+        │                           └──────────┘ └──────────┘ └───────────┘
+        ▼
+   ┌──────────┐
+   │ Gemini   │
+   │AI (Chat) │
+   └──────────┘
 ```
+
+---
+
+## 🌦️ Weather & Soil Microservice
+
+The `backend/weather_and_soil_analysis/` directory is a **standalone Node.js/Express server** (port **3020**) that powers all weather, soil analysis, and AI farming advisory features. It runs alongside Flask but is managed automatically — `node_server.py` starts it as a child process when Flask boots.
+
+**The frontend never talks to port 3020 directly.** Flask's `routes/weather_routes.py` blueprint proxies all four weather/soil endpoints, so the frontend only needs `VITE_WEATHER_API_BASE_URL=http://localhost:5000` (the same Flask backend).
+
+### Technology Stack
+
+| Component | Details |
+|---|---|
+| Runtime | Node.js |
+| Framework | Express 5.2.1 |
+| AI | Google Gemini 2.5-flash (soil analysis & expert advisory) |
+| Weather Data | OpenWeatherMap API (current, 7-day forecast, 3-hour slots) |
+| Geocoding | Nominatim / OpenStreetMap (free — no API key required) |
+| Caching | In-memory soil cache (24-hour TTL per location) |
+
+### API Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/agriculture-data` | Full weather + 7-day forecast + AI soil/groundwater JSON. Query: `?city=Delhi` or `?zipCode=110001` |
+| `GET` | `/api/hourly-weather` | 24-hour interpolated temperature & humidity for charts. Query: `?lat=28.6&lon=77.2` |
+| `GET` | `/api/current-weather` | Lightweight `{location, temperature, condition, icon}` for navbar widget. Query: `?lat=X&lon=Y` |
+| `POST` | `/api/expert-recommendation` | AI-generated expert farming advisory paragraph. Body: `{location, weather, soil}` |
+
+### Setup
+
+```bash
+cd "Major Project/backend/weather_and_soil_analysis"
+npm install
+```
+
+Create `.env` in `weather_and_soil_analysis/`:
+
+```env
+OPENWEATHER_API_KEY=your_openweathermap_api_key
+GEMINI_API_KEY=your_gemini_api_key
+PORT=3020
+```
+
+```bash
+node server.js
+# Server starts at http://localhost:3020
+```
+
+### Design Notes
+- **Soil cache**: AI soil/groundwater data is cached per location for 24 hours to minimize Gemini API calls
+- **Hourly interpolation**: OWM 3-hour forecast slots are linearly interpolated to produce smooth 24-hour charts
+- **Retry logic**: 3 automatic retries with 2-second delay on HTTP 429 rate-limit errors
+- **Flask proxy layer**: `routes/weather_routes.py` Blueprint forwards all weather endpoints from Flask (5000) to the Node.js server (3020); also persists `/api/agriculture-data` searches to MongoDB for admin analytics
+- **Frontend simplicity**: `useWeather.ts` and all weather calls target `http://localhost:5000` — no separate port needed in the frontend `.env`
 
 ---
 
@@ -635,6 +723,9 @@ Before you begin, ensure you have the following installed:
    # Backend API URL
    VITE_API_URL=http://localhost:5000
    
+   # Weather & Soil Microservice URL (proxied through Flask — same port as API)
+   VITE_WEATHER_API_BASE_URL=http://localhost:5000
+   
    # Firebase Configuration (from Firebase Console)
    VITE_FIREBASE_API_KEY=your_firebase_api_key
    VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
@@ -716,15 +807,15 @@ Before you begin, ensure you have the following installed:
 | `frontend/src/pages/` | Route components | React Router, Lazy Loading, Admin Dashboard, Settings with OTP |
 | `frontend/src/components/` | Reusable UI | React.memo, TypeScript, Modals |
 | `frontend/src/hooks/` | Custom hooks | Performance optimization |
-| `backend/routes/` | API endpoints | Flask Blueprints, Auth, Feedback, OTP |
+| `backend/routes/` | API endpoints | Flask Blueprints, Auth, Feedback, Analytics, OTP |
 | `backend/services/` | Business logic | MongoDB, Firebase, Gemini AI, OTP |
 | `backend/utils/` | Helpers | Environment config, utilities |
 
 **New Features Added:**
 - 📊 **Admin Dashboard** (`frontend/src/pages/AdminPanelPage.tsx`) - Developer-only analytics and feedback management with Recharts
-- 💬 **Feedback System** (`backend/routes/feedback_routes.py`) - User feedback submission and admin management
-- 🗄️ **Enhanced Database** (`backend/services/db_service.py`) - 7 collections: users, developers, user_feedback, chat_history, chat_sessions, farming_reports, otp_verifications
-- 📈 **Statistics API** - Comprehensive analytics for users, sessions, reports, and feature usage
+- 💬 **Feedback System** (`backend/routes/feedback_routes.py`) - Pure CRUD: submit, list, delete, and update feedback status
+- 📈 **Analytics Engine** (`backend/routes/analytics_routes.py`) - Comprehensive 8-collection statistics (users, chat, sessions, reports, feedback, disease predictions, weather searches, developers); supports `?days=7|14|30|365`
+- 🗄️ **Enhanced Database** (`backend/services/db_service.py`) - 9 collections: users, developers, user_feedback, chat_history, chat_sessions, farming_reports, otp_verifications, disease_predictions, weather_searches
 - 🔐 **OTP-Based Signup** (`backend/services/otp_service.py`) - Email OTP verification before account creation (10-minute expiry)
 - 💬 **Multi-Session Chat** - Full session management: list, retrieve, and delete individual chat sessions
 - 🔗 **Google Account Linking** (`backend/routes/auth_routes.py`) - Link Google accounts to existing email/password accounts
@@ -1040,51 +1131,51 @@ Protected endpoints:
 ### 📊 Collections Relationship Diagram
 
 ```
-                                    ┌─────────────────────────────────┐
-                                    │         users                   │
-                                    │  ─────────────────────────────  │
-                                    │  _id: ObjectId (PK)             │
-                                    │  email: String                  │
-                                    │  password: String (hashed)      │
-                                    │  name: String                   │
-                                    │  profilePicture: String         │
-                                    │  firebase_uid: String           │
-                                    │  auth_providers: Array          │
-                                    │  created_at: DateTime           │
-                                    │  last_login: DateTime           │
-                                    └──────────┬──────────────────────┘
-                                               │
-                                               │ (1:N relationships)
-                   ┌───────────────────────────┼───────────────────────────┬──────────────────┐
-                   │                           │                           │                  │
-                   │                           │                           │                  │
-        ┌──────────▼──────────┐     ┌──────────▼──────────┐    ┌──────────▼──────────┐        │
-        │   chat_sessions     │     │   chat_history      │    │  farming_reports    │        │
-        │  ─────────────────  │     │  ─────────────────  │    │  ─────────────────  │        │
-        │  _id: ObjectId (PK) │     │  _id: ObjectId (PK) │    │  _id: ObjectId (PK) │        │
-        │  user_id: String(FK)│     │  user_id: String(FK)│    │  user_id: String(FK)│        │
-        │  started_at: Date   │     │  session_id: Str(FK)│    ┤  crop: String       │        │
-        │  ended_at: Date     │────▶│  message: String   │     │  region: String     │        │
-        └─────────────────────┘     │  response: String   │    │  language: String   │        │
-              (1:N)                 │  language: String   │    │  report: Object     │        │
-        One session contains        │  input_type: String │    │  generated_at: Date │        │ 
-        multiple messages           │  response_type: Str │    └─────────────────────┘        │
-                                    │  timestamp: Date    │                                   │
-                                    └─────────────────────┘                                   │
-                                                                                              │
-                                                                                ┌─────────────▼─────────────┐
-        ┌─────────────────────┐              ┌─────────────────────────────┐    │   otp_verifications       │
-        │    developers       │              │     user_feedback           │    │  ───────────────────────  │
-        │  ─────────────────  │              │  ─────────────────────────  │    │  _id: ObjectId (PK)       │
-        │  _id: ObjectId (PK) │              │  _id: ObjectId (PK)         │    │  email: String            │
-        │  email: String      │              │  name: String               │    │  otp: String              │
-        │  user_id: String(FK)│─────────────▶│  email: String              │    │  purpose: String          │
-        └─────────────────────┘              │  message: String            │    │  expires_at: DateTime     │
-              │                              │  user_id: String (FK, Opt)  │    │  verified: Boolean        │
-              │                              │  status: String             │    │  created_at: DateTime     │
-              │                              │  timestamp: DateTime        │    │  TTL Index: 24 hours      │
-              └──────────────────────────────│  resolved_at: DateTime      │    └───────────────────────────┘
-                 (manages feedback)          └─────────────────────────────┘        (email verification)
+                                          ┌─────────────────────────────────┐
+                                          │             users               │
+                                          │  ─────────────────────────────  │
+                                          │  _id: ObjectId (PK)             │
+                                          │  email: String                  │
+                                          │  password: String (hashed)      │
+                                          │  name: String                   │
+                                          │  profilePicture: String         │
+                                          │  firebase_uid: String           │
+                                          │  auth_providers: Array          │
+                                          │  created_at: DateTime           │
+                                          │  last_login: DateTime           │
+                                          └────────────────┬────────────────┘
+                                                           │
+                                                           │ (1:N relationships)
+           ┌────────────────────────┬──────────────────────┼──────────────────────┬────────────────────────┐
+           │                        │                       │                      │                        │
+           ▼                        ▼                       ▼                      ▼                        ▼
+ ┌──────────────────┐   ┌───────────────────┐   ┌──────────────────┐   ┌─────────────────────┐   ┌──────────────────────┐
+ │  chat_sessions   │   │   chat_history    │   │ farming_reports  │   │ disease_predictions │   │  weather_searches    │
+ │  ──────────────  │   │  ───────────────  │   │  ──────────────  │   │  ─────────────────  │   │  ────────────────    │
+ │  _id: ObjectId   │   │  _id: ObjectId    │   │  _id: ObjectId   │   │  _id: ObjectId (PK) │   │  _id: ObjectId (PK)  │
+ │  user_id: FK     │   │  user_id: FK      │   │  user_id: FK     │   │  user_id: FK        │   │  user_id: FK (opt.)  │
+ │  started_at: Date│   │  session_id: FK   │   │  crop: String    │   │  disease: String    │   │  input.city: String  │
+ │  ended_at: Date  │──▶│  message: String  │   │  region: String  │   │  confidence: Float  │   │  user_type: String   │
+ └──────────────────┘   │  response: String │   │  language: String│   │  image_name: String │   │  weather_output: Obj │
+      (1:N)             │  language: String │   │  report: Object  │   │  timestamp: DateTime│   │  timestamp: DateTime │
+   One session has      │  input_type: Str  │   │  generated_at:Dt │   └─────────────────────┘   └──────────────────────┘
+   multiple messages    │  response_type:Str│  └──────────────────┘    (auth users only)          (trial + registered)
+                        │  timestamp: Date  │
+                        └───────────────────┘
+
+        ┌─────────────────────┐       ┌───────────────────────────┐       ┌────────────────────────────┐
+        │    developers       │       │      user_feedback        │       │    otp_verifications       │
+        │  ─────────────────  │       │  ───────────────────────  │       │  ────────────────────────  │
+        │  _id: ObjectId (PK) │       │  _id: ObjectId (PK)       │       │  _id: ObjectId (PK)        │
+        │  email: String      │       │  name: String             │       │  email: String             │
+        │  user_id: FK        │──────▶│  email: String            │       │  otp: String               │
+        └─────────────────────┘       │  message: String          │       │  purpose: String           │
+          (admin access)              │  user_id: FK (optional)   │       │  expires_at: DateTime      │
+                                      │  status: String           │       │  verified: Boolean         │
+                                      │  timestamp: DateTime      │       │  created_at: DateTime      │
+                                      │  resolved_at: DateTime    │       │  TTL Index: 24 hours       │
+                                      └───────────────────────────┘       └────────────────────────────┘
+                                        (anonymous or authenticated)          (email verification)
 ```
 
 ### 🔗 Collection Relationships
@@ -1098,6 +1189,8 @@ Protected endpoints:
 | `developers` | `users._id` → `user_id` | One-to-One | Links developer access to user account |
 | `user_feedback` | `users._id` → `user_id` | Many-to-One (Optional) | Anonymous or authenticated feedback |
 | `otp_verifications` | `users.email` → `email` | Many-to-One | Email-based OTP verification for password reset |
+| `disease_predictions` | `users._id` → `user_id` | Many-to-One | Each authenticated user can have multiple prediction records |
+| `weather_searches` | `users._id` → `user_id` (optional) | Many-to-One | Logged for both registered and trial users (`user_id` is null for trial) |
 
 ### 🎯 Key Features
 
@@ -1110,6 +1203,8 @@ Protected endpoints:
 - **Auto-Cleanup**: Resolved feedback older than 7 days is automatically deleted
 - **OTP Verification**: Secure email-based OTP system with auto-expiration (5 minutes) and TTL index (24 hours)
 - **Timezone Aware**: All timestamps stored in UTC for consistency
+- **Disease Analytics**: Every authenticated plant disease scan result is persisted in `disease_predictions` for usage tracking
+- **Weather Analytics**: Every `/api/agriculture-data` lookup (city + full output JSON) is saved to `weather_searches` for both registered and trial users
 
 ---
 
@@ -1221,6 +1316,32 @@ Protected endpoints:
 - **Purpose Tracking**: Supports different OTP purposes (password reset, email verification, etc.)
 - **Verification Status**: Tracks whether OTP has been used
 - **Email-based**: Links to users via email address for password reset functionality
+
+#### 8. Disease Predictions Collection (`disease_predictions`)
+
+```javascript
+{
+  "_id": ObjectId("..."),
+  "user_id": "user_id_here",        // References users._id (authenticated users only)
+  "disease": "Tomato Leaf Blight",  // Disease label from ML model
+  "confidence": 92.5,               // Confidence percentage (0–100)
+  "image_name": "leaf_photo.jpg",   // Original filename uploaded (optional)
+  "timestamp": ISODate("2025-01-10T08:15:00.000Z")
+}
+```
+
+#### 9. Weather Searches Collection (`weather_searches`)
+
+```javascript
+{
+  "_id": ObjectId("..."),
+  "input": { "city": "Delhi" },          // City or zipCode searched
+  "user_id": "user_id_here",            // null for unauthenticated / trial users
+  "user_type": "registered",            // "registered" | "trial"
+  "weather_output": { /* full Node.js weather API response */ },
+  "timestamp": ISODate("2025-01-10T09:00:00.000Z")
+}
+```
 
 ---
 
