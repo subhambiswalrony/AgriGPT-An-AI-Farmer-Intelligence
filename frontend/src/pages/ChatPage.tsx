@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Send, Bot, User, Mic, MicOff, Volume2, Sparkles, X, Trash2, Plus, MessageSquare, ChevronLeft, ChevronRight, Menu } from 'lucide-react';
+import TutorialModal from '../components/TutorialModal';
 import { getApiUrl, API_ENDPOINTS } from '../config/api';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { debounce } from '../utils/debounce';
@@ -1848,6 +1849,45 @@ const ChatPage = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Page Tutorial */}
+      <TutorialModal
+        accentColor="green"
+        fabBottom="bottom-[70px] sm:bottom-[82px] md:bottom-[96px] lg:bottom-[116px]"
+        pageTitle="AI Farming Assistant"
+        pageDescription="Chat with your personal AI to get instant farming advice."
+        steps={[
+          {
+            title: 'Start a New Chat',
+            description: 'Click the "+" button in the left sidebar to begin a fresh conversation. Each chat is saved automatically so you can revisit it anytime.',
+            icon: <Plus size={28} />,
+            tip: 'You can rename a chat by clicking its title in the sidebar.',
+          },
+          {
+            title: 'Type Your Question',
+            description: 'Type any farming question in the message box at the bottom and press Enter or click the Send button to get an AI-powered answer.',
+            icon: <Send size={28} />,
+            tip: 'Ask in Hindi, English, or any regional language — the AI understands both.',
+          },
+          {
+            title: 'Voice Input',
+            description: 'Click the microphone button to speak your question instead of typing. The AI will transcribe and respond to your voice message.',
+            icon: <Mic size={28} />,
+            tip: 'Speak clearly and wait for the recording indicator before asking your question.',
+          },
+          {
+            title: 'Listen to Responses',
+            description: 'Click the speaker icon next to any bot message to hear the response read aloud in your chosen language.',
+            icon: <Volume2 size={28} />,
+          },
+          {
+            title: 'Manage Your Chats',
+            description: 'All conversations are listed in the sidebar. Click the trash icon to delete a chat, or click any chat to continue where you left off.',
+            icon: <MessageSquare size={28} />,
+            tip: 'Your chat history is private and only visible to you.',
+          },
+        ]}
+      />
     </div>
   );
 };

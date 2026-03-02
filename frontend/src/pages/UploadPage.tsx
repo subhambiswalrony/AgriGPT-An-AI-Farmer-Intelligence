@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Upload, Camera, CheckCircle, AlertCircle, X, Sparkles, Leaf, FileImage, Zap, Shield, FlaskConical, Lock, LogIn, UserPlus } from 'lucide-react';
+import TutorialModal from '../components/TutorialModal';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/api';
 
@@ -88,10 +89,12 @@ const UploadPage = () => {
     const formData = new FormData();
     formData.append('image', selectedFile, selectedFile.name);
 
+    const authToken = localStorage.getItem('token');
     try {
       const response = await fetch(PREDICT_API_URL, {
         method: 'POST',
         body: formData,
+        headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : undefined,
       });
 
       if (!response.ok) {
@@ -317,6 +320,7 @@ const UploadPage = () => {
 
                 {/* Upload Area */}
                 <div className="relative group">
+                  {/* Hidden file input — triggered programmatically */}
                   <input
                     type="file"
                     accept="image/*"
@@ -324,94 +328,83 @@ const UploadPage = () => {
                     className="hidden"
                     id="image-upload"
                   />
-                  <label
-                    htmlFor="image-upload"
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    className={`
-                    relative flex flex-col items-center justify-center w-full h-80 
-                    border-3 border-dashed rounded-2xl cursor-pointer 
-                    transition-all duration-300 overflow-hidden
-                    ${isDragging
-                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20 scale-105'
-                        : selectedImage
-                          ? 'border-transparent'
-                          : 'border-gray-300 dark:border-gray-600 hover:border-green-400 dark:hover:border-green-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                      }
-                  `}
-                  >
-                    <AnimatePresence mode="wait">
-                      {selectedImage ? (
-                        <motion.div
-                          key="image"
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          className="relative w-full h-full"
+                  <AnimatePresence mode="wait">
+                    {selectedImage ? (
+                      /* ── CAPTURED / UPLOADED IMAGE ── */
+                      <motion.div
+                        key="image"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        className="relative w-full h-80"
+                      >
+                        <img
+                          src={selectedImage}
+                          alt="Selected plant"
+                          className="w-full h-full object-cover rounded-2xl"
+                        />
+                        {/* Hover overlay — click to change */}
+                        <label
+                          htmlFor="image-upload"
+                          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center rounded-2xl cursor-pointer"
                         >
-                          <img
-                            src={selectedImage}
-                            alt="Uploaded crop"
-                            className="w-full h-full object-cover rounded-2xl"
-                          />
-                          {/* Overlay on hover */}
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center rounded-2xl">
-                            <div className="text-center text-white">
-                              <Upload size={40} className="mx-auto mb-2" />
-                              <p className="font-medium">Click to change image</p>
-                            </div>
+                          <div className="text-center text-white">
+                            <Upload size={40} className="mx-auto mb-2" />
+                            <p className="font-medium">Click to change image</p>
                           </div>
-                          {/* Close button */}
-                          <motion.button
-                            whileHover={{ scale: 1.1, rotate: 90 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              clearImage();
-                            }}
-                            className="absolute top-4 right-4 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors z-10"
-                          >
-                            <X size={20} />
-                          </motion.button>
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="placeholder"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="flex flex-col items-center"
+                        </label>
+                        {/* Clear button */}
+                        <motion.button
+                          whileHover={{ scale: 1.1, rotate: 90 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => { e.stopPropagation(); clearImage(); }}
+                          className="absolute top-4 right-4 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors z-10"
                         >
-                          <motion.div
-                            animate={{
-                              y: [0, -10, 0],
-                              rotate: [0, 5, -5, 0]
-                            }}
-                            transition={{
-                              duration: 3,
-                              repeat: Infinity,
-                              ease: "easeInOut"
-                            }}
-                            className="mb-6"
-                          >
-                            <div className="relative">
-                              <div className="absolute inset-0 bg-green-400 dark:bg-green-600 blur-xl opacity-50 animate-pulse"></div>
-                              <Upload size={64} className="relative text-green-600 dark:text-green-400" />
-                            </div>
-                          </motion.div>
-                          <p className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">
-                            {isDragging ? 'Drop your leaf image here' : 'Upload Leaf Image'}
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs">
-                            Click to browse or drag and drop<br />
-                            <span className="text-xs text-orange-500 dark:text-orange-400 font-medium">🍃 Leaves only — fruits & vegetables not supported</span><br />
-                            <span className="text-xs">PNG, JPG, JPEG up to 10MB</span>
-                          </p>
+                          <X size={20} />
+                        </motion.button>
+                      </motion.div>
+                    ) : (
+                      /* ── EMPTY PLACEHOLDER ── */
+                      <motion.div
+                        key="placeholder"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onClick={() => document.getElementById('image-upload')?.click()}
+                        className={`
+                          flex flex-col items-center justify-center w-full h-80
+                          border-2 border-dashed rounded-2xl cursor-pointer
+                          transition-all duration-300
+                          ${isDragging
+                            ? 'border-green-500 bg-green-50 dark:bg-green-900/20 scale-105'
+                            : 'border-gray-300 dark:border-gray-600 hover:border-green-400 dark:hover:border-green-500 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                          }
+                        `}
+                      >
+                        <motion.div
+                          animate={shouldReduceMotion ? {} : { y: [0, -10, 0], rotate: [0, 5, -5, 0] }}
+                          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                          className="mb-6"
+                        >
+                          <div className="relative">
+                            <div className="absolute inset-0 bg-green-400 dark:bg-green-600 blur-xl opacity-50 animate-pulse" />
+                            <Upload size={64} className="relative text-green-600 dark:text-green-400" />
+                          </div>
                         </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </label>
+                        <p className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                          {isDragging ? 'Drop your leaf image here' : 'Upload Leaf Image'}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-xs">
+                          Drag &amp; drop or click to browse<br />
+                          <span className="text-xs text-orange-500 dark:text-orange-400 font-medium">🍃 Leaves only — fruits &amp; vegetables not supported</span><br />
+                          <span className="text-xs">PNG, JPG, JPEG up to 10MB</span>
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Analyze Button */}
@@ -715,6 +708,38 @@ const UploadPage = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Page Tutorial */}
+      <TutorialModal
+        accentColor="green"
+        pageTitle="Plant Disease Detection"
+        pageDescription="Upload a plant photo and get an instant AI diagnosis."
+        steps={[
+          {
+            title: 'Upload a Plant Photo',
+            description: 'Click the upload area or drag & drop a clear photo of the affected plant leaf directly onto the page. Supported formats: PNG, JPG, JPEG up to 10MB.',
+            icon: <Upload size={28} />,
+            tip: 'For best results, use a well-lit, close-up photo of the affected leaf.',
+          },
+          {
+            title: 'Run the Analysis',
+            description: 'After selecting an image, click the "Analyze" button. The AI model will scan the photo and identify any plant diseases.',
+            icon: <Zap size={28} />,
+            tip: 'Analysis usually completes within a few seconds.',
+          },
+          {
+            title: 'View the Results',
+            description: 'The detected disease name and a confidence percentage will appear below your image. Higher confidence means a more certain diagnosis.',
+            icon: <CheckCircle size={28} />,
+            tip: 'You must be logged in to access the full disease analysis feature.',
+          },
+          {
+            title: 'Supported Crops',
+            description: 'The model currently supports detection of diseases in wheat, rice, maize, tomato, potato, and many other common crops.',
+            icon: <Leaf size={28} />,
+          },
+        ]}
+      />
     </div>
   );
 };

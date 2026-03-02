@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Sprout, Sun, Droplets, Calendar, Download, History, Clock, LogIn, FileText, Sparkles, TrendingUp, Zap, Cloud, Leaf, Lock, UserPlus } from 'lucide-react';
+import TutorialModal from '../components/TutorialModal';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -916,6 +917,43 @@ const ReportPage = () => {
         </div>
       </div>
       </div>
+
+      {/* Page Tutorial */}
+      <TutorialModal
+        accentColor="green"
+        pageTitle="Crop Report Generator"
+        pageDescription="Generate personalized farming reports with AI-powered insights."
+        steps={[
+          {
+            title: 'Enter Crop Details',
+            description: 'Type the name of your crop (e.g., Wheat, Rice, Tomato) and your region or district name in the input fields.',
+            icon: <Sprout size={28} />,
+            tip: 'Be specific with the region name for more accurate local advice.',
+          },
+          {
+            title: 'Choose Language',
+            description: 'Select your preferred language from the dropdown. The report will be fully generated in that language, including all advice and tips.',
+            icon: <FileText size={28} />,
+          },
+          {
+            title: 'Generate the Report',
+            description: 'Click the "Generate Report" button. The AI will create a complete report covering sowing advice, fertilizer plan, weather tips, and crop calendar.',
+            icon: <Sparkles size={28} />,
+            tip: 'Generation takes about 10–20 seconds as the AI crafts personalised advice.',
+          },
+          {
+            title: 'Download as PDF',
+            description: 'Once the report is ready, click the download button at the top of the report card to save a formatted PDF copy to your device.',
+            icon: <Download size={28} />,
+          },
+          {
+            title: 'Report History',
+            description: 'All previously generated reports are saved under the "History" section below the form. Click any past report to reload it instantly.',
+            icon: <History size={28} />,
+            tip: 'Your report history is only available when you are logged in.',
+          },
+        ]}
+      />
     </div>
   );
 };
