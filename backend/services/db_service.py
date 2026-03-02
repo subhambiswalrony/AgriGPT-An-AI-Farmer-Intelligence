@@ -12,6 +12,8 @@ user_collection = db.users
 report_collection = db.farming_reports
 feedback_collection = db.user_feedback
 developers_collection = db.developers
+disease_predictions_collection = db.disease_predictions
+weather_searches_collection = db.weather_searches
 
 
 def save_chat(user_id, question, answer, response_type, language, input_type="text", chat_id=None):
@@ -298,4 +300,49 @@ def get_all_feedbacks():
     except Exception as e:
         print(f"✗ Error getting feedbacks: {str(e)}")
         return []
+
+
+# ==================== DISEASE PREDICTION TRACKING ====================
+
+def save_disease_prediction(disease: str, confidence: float, user_id: str, image_name: str = None):
+    """
+    Persist a plant-disease prediction result.
+    Only called for authenticated (registered) users — trial users are excluded.
+    """
+    try:
+        doc = {
+            "user_id":   user_id,
+            "disease":   disease,
+            "confidence": confidence,          # already in % (e.g. 92.5)
+            "timestamp": datetime.now(timezone.utc),
+        }
+        if image_name:
+            doc["image_name"] = image_name     # original filename uploaded
+        result = disease_predictions_collection.insert_one(doc)
+        print(f"✓ Disease prediction saved: {disease} ({confidence}%) | user: {user_id} | file: {image_name} | ID: {result.inserted_id}")
+        return result.inserted_id
+    except Exception as e:
+        print(f"✗ Error saving disease prediction: {str(e)}")
+
+
+# ==================== WEATHER SEARCH TRACKING ====================
+
+def save_weather_search(city: str, user_id: str = None, weather_output: dict = None):
+    """
+    Persist a weather + soil lookup, including the full API output.
+    Called for both trial users (user_id=None) and registered users.
+    """
+    try:
+        doc = {
+            "input":        {"city": city},
+            "user_id":      user_id,
+            "user_type":    "registered" if user_id else "trial",
+            "weather_output": weather_output or {},
+            "timestamp":    datetime.now(timezone.utc),
+        }
+        result = weather_searches_collection.insert_one(doc)
+        print(f"✓ Weather search saved: city='{city}' | user={user_id or 'trial'} | ID: {result.inserted_id}")
+        return result.inserted_id
+    except Exception as e:
+        print(f"✗ Error saving weather search: {str(e)}")
 
