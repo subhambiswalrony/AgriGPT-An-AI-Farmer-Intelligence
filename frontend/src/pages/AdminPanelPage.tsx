@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, MessageSquare, Mail, User, Calendar, RefreshCw, LogOut, FileText, AlertCircle, Trash2, Check, CheckCircle, TrendingUp, TrendingDown, PieChart as PieIcon, BarChart2, Activity, ChevronDown, ChevronUp, Zap, Sprout, Bug, Mic, Award, AlertTriangle, Languages } from 'lucide-react';
+import { Shield, MessageSquare, Mail, User, Calendar, RefreshCw, LogOut, FileText, AlertCircle, Trash2, Check, CheckCircle, TrendingUp, TrendingDown, PieChart as PieIcon, BarChart2, Activity, ChevronDown, ChevronUp, Zap, Sprout, Bug, Mic, Award, AlertTriangle, Languages, Upload, CloudSun, FlaskConical, MapPin } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area, Brush, Sector
@@ -63,6 +63,23 @@ interface Statistics {
     resolved: number;
     resolution_rate: number;
   };
+  upload_analytics: {
+    total_predictions: number;
+    predictions_this_week: number;
+    predictions_prev_week: number;
+    predictions_period: number;
+    prediction_growth_pct: number;
+    avg_confidence: number;
+    top_predictions: { name: string; count: number; }[];
+  };
+  weather_analytics: {
+    total_searches: number;
+    searches_this_week: number;
+    searches_prev_week: number;
+    searches_period: number;
+    weather_growth_pct: number;
+    top_locations: { location: string; count: number; }[];
+  };
   platform_health: {
     score: number;
     color: string;
@@ -79,7 +96,7 @@ interface Statistics {
   days_range?: number;
   recent_activity: {
     last_7_days: { new_users: number; chat_sessions: number; reports: number; };
-    daily: { date: string; new_users: number; chat_sessions: number; reports: number; }[];
+    daily: { date: string; new_users: number; chat_sessions: number; reports: number; predictions: number; weather_searches: number; }[];
   };
 }
 
@@ -624,6 +641,43 @@ const AdminPanelPage = () => {
                   <p className="text-xs text-emerald-500 dark:text-emerald-400 mt-1">{statistics.feedback_analytics.resolved} of {statistics.feedback_analytics.total} resolved</p>
                 </div>
               </div>
+
+              {/* Second engagement row: Upload + Weather quick stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                {/* Disease Predictions */}
+                <div className="col-span-2 md:col-span-2 bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/30 dark:to-violet-900/30 rounded-2xl p-5 border border-purple-200 dark:border-purple-700/30 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1.5 bg-purple-600 rounded-lg"><Upload size={14} className="text-white" /></div>
+                    <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 uppercase tracking-wide">Disease Scans (Upload Page)</p>
+                    {statistics.upload_analytics && (
+                      <div className="ml-auto"><DeltaBadge pct={statistics.upload_analytics.prediction_growth_pct} /></div>
+                    )}
+                  </div>
+                  <div className="flex items-end gap-4">
+                    <div>
+                      <p className="text-3xl font-black text-purple-900 dark:text-purple-100">{statistics.upload_analytics?.total_predictions ?? 0}</p>
+                      <p className="text-xs text-purple-500 dark:text-purple-400 mt-1">+{statistics.upload_analytics?.predictions_this_week ?? 0} this week · avg {statistics.upload_analytics?.avg_confidence ?? 0}% confidence</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weather Searches */}
+                <div className="col-span-2 md:col-span-2 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-900/30 dark:to-blue-900/30 rounded-2xl p-5 border border-sky-200 dark:border-sky-700/30 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1.5 bg-sky-600 rounded-lg"><CloudSun size={14} className="text-white" /></div>
+                    <p className="text-xs font-semibold text-sky-700 dark:text-sky-300 uppercase tracking-wide">Weather Searches (Weather Page)</p>
+                    {statistics.weather_analytics && (
+                      <div className="ml-auto"><DeltaBadge pct={statistics.weather_analytics.weather_growth_pct} /></div>
+                    )}
+                  </div>
+                  <div className="flex items-end gap-4">
+                    <div>
+                      <p className="text-3xl font-black text-sky-900 dark:text-sky-100">{statistics.weather_analytics?.total_searches ?? 0}</p>
+                      <p className="text-xs text-sky-500 dark:text-sky-400 mt-1">+{statistics.weather_analytics?.searches_this_week ?? 0} this week · {statistics.weather_analytics?.top_locations?.[0]?.location ?? 'N/A'} most searched</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           )}
 
@@ -710,10 +764,12 @@ const AdminPanelPage = () => {
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart
                       data={[
-                        { name: 'Chat',      value: barRange === 'all' ? statistics.feature_usage.chat_sessions      : statistics.feature_usage.chat_sessions_period },
-                        { name: 'Reports',   value: barRange === 'all' ? statistics.feature_usage.reports_generated  : statistics.feature_usage.reports_period },
-                        { name: 'Feedbacks', value: barRange === 'all' ? statistics.feature_usage.feedbacks_received : statistics.feature_usage.feedbacks_period },
-                        { name: 'Users',     value: barRange === 'all' ? statistics.users.total                      : statistics.users.recent_signups },
+                        { name: 'Chat',       value: barRange === 'all' ? statistics.feature_usage.chat_sessions      : statistics.feature_usage.chat_sessions_period },
+                        { name: 'Reports',    value: barRange === 'all' ? statistics.feature_usage.reports_generated  : statistics.feature_usage.reports_period },
+                        { name: 'Feedbacks',  value: barRange === 'all' ? statistics.feature_usage.feedbacks_received : statistics.feature_usage.feedbacks_period },
+                        { name: 'Users',      value: barRange === 'all' ? statistics.users.total                      : statistics.users.recent_signups },
+                        { name: 'Predictions', value: barRange === 'all' ? (statistics.upload_analytics?.total_predictions ?? 0) : (statistics.upload_analytics?.predictions_period ?? 0) },
+                        { name: 'Weather',    value: barRange === 'all' ? (statistics.weather_analytics?.total_searches ?? 0) : (statistics.weather_analytics?.searches_period ?? 0) },
                       ]}
                       margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
                       onClick={(d) => { if (d && typeof d.activeTooltipIndex === 'number') setExpandedBar(expandedBar === d.activeTooltipIndex ? null : d.activeTooltipIndex); }}
@@ -723,9 +779,11 @@ const AdminPanelPage = () => {
                         <linearGradient id="barReports" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f97316" stopOpacity={0.9} /><stop offset="100%" stopColor="#fb923c" stopOpacity={0.6} /></linearGradient>
                         <linearGradient id="barFeedbacks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.9} /><stop offset="100%" stopColor="#34d399" stopOpacity={0.6} /></linearGradient>
                         <linearGradient id="barUsers" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3b82f6" stopOpacity={0.9} /><stop offset="100%" stopColor="#60a5fa" stopOpacity={0.6} /></linearGradient>
+                        <linearGradient id="barPredictions" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#a855f7" stopOpacity={0.9} /><stop offset="100%" stopColor="#c084fc" stopOpacity={0.6} /></linearGradient>
+                        <linearGradient id="barWeather" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#0ea5e9" stopOpacity={0.9} /><stop offset="100%" stopColor="#38bdf8" stopOpacity={0.6} /></linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(156,163,175,0.2)" />
-                      <XAxis dataKey="name" tick={{ fontSize: 13, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
                       <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
                       <Tooltip
                         contentStyle={{ background: 'rgba(255,255,255,0.95)', border: '1px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
@@ -735,7 +793,7 @@ const AdminPanelPage = () => {
                       <Bar dataKey="value" radius={[8, 8, 0, 0]} cursor="pointer"
                         activeBar={{ fill: 'rgba(99,102,241,0.25)', stroke: '#6366f1', strokeWidth: 2, radius: [8,8,0,0] as any }}
                       >
-                        {['url(#barChat)', 'url(#barReports)', 'url(#barFeedbacks)', 'url(#barUsers)'].map((fill, idx) => (
+                        {['url(#barChat)', 'url(#barReports)', 'url(#barFeedbacks)', 'url(#barUsers)', 'url(#barPredictions)', 'url(#barWeather)'].map((fill, idx) => (
                           <Cell key={idx} fill={fill} />
                         ))}
                       </Bar>
@@ -841,6 +899,8 @@ const AdminPanelPage = () => {
                       { color: '#10b981', label: 'New Users' },
                       { color: '#6366f1', label: 'Chat Sessions' },
                       { color: '#f97316', label: 'Reports' },
+                      { color: '#a855f7', label: 'Disease Scans' },
+                      { color: '#0ea5e9', label: 'Weather Searches' },
                     ].map(({ color, label }) => (
                       <div key={label} className="flex items-center gap-1.5">
                         <span className="inline-block w-3 h-3 rounded-full" style={{ background: color }} />
@@ -858,6 +918,8 @@ const AdminPanelPage = () => {
                         <linearGradient id="areaUsers" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.4} /><stop offset="95%" stopColor="#10b981" stopOpacity={0.0} /></linearGradient>
                         <linearGradient id="areaChats" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} /><stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} /></linearGradient>
                         <linearGradient id="areaReports" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f97316" stopOpacity={0.4} /><stop offset="95%" stopColor="#f97316" stopOpacity={0.0} /></linearGradient>
+                        <linearGradient id="areaPredictions" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#a855f7" stopOpacity={0.4} /><stop offset="95%" stopColor="#a855f7" stopOpacity={0.0} /></linearGradient>
+                        <linearGradient id="areaWeather" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.4} /><stop offset="95%" stopColor="#0ea5e9" stopOpacity={0.0} /></linearGradient>
                         <linearGradient id="brushGradient" x1="0" y1="0" x2="1" y2="0">
                           <stop offset="0%" stopColor={isDarkMode ? '#10b981' : '#059669'} stopOpacity={0.25} />
                           <stop offset="50%" stopColor={isDarkMode ? '#6366f1' : '#6366f1'} stopOpacity={0.20} />
@@ -906,6 +968,8 @@ const AdminPanelPage = () => {
                       <Area type="monotone" dataKey="new_users" name="New Users" stroke="#10b981" strokeWidth={2.5} fill="url(#areaUsers)" dot={{ r: 4, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} />
                       <Area type="monotone" dataKey="chat_sessions" name="Chat Sessions" stroke="#6366f1" strokeWidth={2.5} fill="url(#areaChats)" dot={{ r: 4, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} />
                       <Area type="monotone" dataKey="reports" name="Reports" stroke="#f97316" strokeWidth={2.5} fill="url(#areaReports)" dot={{ r: 4, fill: '#f97316', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} />
+                      <Area type="monotone" dataKey="predictions" name="Disease Scans" stroke="#a855f7" strokeWidth={2.5} fill="url(#areaPredictions)" dot={{ r: 4, fill: '#a855f7', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} />
+                      <Area type="monotone" dataKey="weather_searches" name="Weather Searches" stroke="#0ea5e9" strokeWidth={2.5} fill="url(#areaWeather)" dot={{ r: 4, fill: '#0ea5e9', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7, strokeWidth: 2, stroke: '#fff' }} />
                     </AreaChart>
                   </ResponsiveContainer>
 
@@ -948,17 +1012,19 @@ const AdminPanelPage = () => {
                       }`}>
                         {statistics.platform_health.color === 'green' ? '🟢 Healthy' : statistics.platform_health.color === 'yellow' ? '🟡 Moderate' : '🔴 Needs Attention'}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Composite of 5 key factors</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Composite of 7 key factors</p>
                     </div>
                   </div>
 
                   <div className="flex-1 space-y-3">
                     {[
-                      { label: 'User Growth',     pct: (statistics.platform_health.components.user_growth   / 30) * 100, score: statistics.platform_health.components.user_growth,    max: 30, color: 'from-green-400 to-emerald-600' },
-                      { label: 'Engagement',      pct: (statistics.platform_health.components.engagement    / 25) * 100, score: statistics.platform_health.components.engagement,     max: 25, color: 'from-indigo-400 to-purple-600' },
-                      { label: 'AI Success',      pct: (statistics.platform_health.components.ai_success    / 20) * 100, score: statistics.platform_health.components.ai_success,     max: 20, color: 'from-blue-400 to-cyan-600' },
-                      { label: 'Feedback Rating', pct: (statistics.platform_health.components.feedback       / 15) * 100, score: statistics.platform_health.components.feedback,       max: 15, color: 'from-orange-400 to-amber-500' },
-                      { label: 'Report Activity', pct: (statistics.platform_health.components.report_activity / 10) * 100, score: statistics.platform_health.components.report_activity, max: 10, color: 'from-pink-400 to-rose-500' },
+                      { label: 'User Growth',        pct: (statistics.platform_health.components.user_growth         / 20) * 100, score: statistics.platform_health.components.user_growth,         max: 20, color: 'from-green-400 to-emerald-600' },
+                      { label: 'Engagement',         pct: (statistics.platform_health.components.engagement          / 20) * 100, score: statistics.platform_health.components.engagement,          max: 20, color: 'from-indigo-400 to-purple-600' },
+                      { label: 'AI Success',         pct: (statistics.platform_health.components.ai_success          / 15) * 100, score: statistics.platform_health.components.ai_success,          max: 15, color: 'from-blue-400 to-cyan-600' },
+                      { label: 'Feedback Rating',    pct: (statistics.platform_health.components.feedback            / 15) * 100, score: statistics.platform_health.components.feedback,            max: 15, color: 'from-orange-400 to-amber-500' },
+                      { label: 'Report Activity',    pct: (statistics.platform_health.components.report_activity     / 10) * 100, score: statistics.platform_health.components.report_activity,     max: 10, color: 'from-pink-400 to-rose-500' },
+                      { label: 'Disease Scans',      pct: ((statistics.platform_health.components.prediction_activity ?? 0) / 10) * 100, score: statistics.platform_health.components.prediction_activity ?? 0, max: 10, color: 'from-purple-400 to-violet-500' },
+                      { label: 'Weather Searches',   pct: ((statistics.platform_health.components.weather_activity   ?? 0) / 10) * 100, score: statistics.platform_health.components.weather_activity   ?? 0, max: 10, color: 'from-sky-400 to-blue-500' },
                     ].map((item, i) => {
                       const isExpanded = expandedBar === (100 + i);
                       return (
@@ -1121,6 +1187,181 @@ const AdminPanelPage = () => {
                       })}
                     </div>
                   )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Upload Page & Weather Page Analytics ── */}
+          {statistics && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55 }}
+              className="mb-8 space-y-4"
+            >
+              {/* Section title */}
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl">
+                  <Upload size={20} className="text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Upload & Weather Analytics</h2>
+                <span className="text-xs px-3 py-1 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-full font-medium">Feature Usage</span>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                {/* ── Disease Prediction (Upload) Card ── */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700/50 relative">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-400 via-violet-500 to-fuchsia-500 rounded-t-2xl" />
+
+                  {/* Header */}
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                      <FlaskConical size={18} className="text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Disease Prediction (Upload Page)</h3>
+                  </div>
+
+                  {/* KPI row */}
+                  <div className="grid grid-cols-3 gap-3 mb-5">
+                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-black text-purple-600 dark:text-purple-400">
+                        {statistics.upload_analytics?.total_predictions ?? 0}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Total Scans</p>
+                    </div>
+                    <div className="bg-violet-50 dark:bg-violet-900/20 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-black text-violet-600 dark:text-violet-400">
+                        {statistics.upload_analytics?.predictions_this_week ?? 0}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">This Week</p>
+                    </div>
+                    <div className="bg-fuchsia-50 dark:bg-fuchsia-900/20 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-black text-fuchsia-600 dark:text-fuchsia-400">
+                        {statistics.upload_analytics?.avg_confidence ?? 0}<span className="text-base font-bold">%</span>
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Avg Confidence</p>
+                    </div>
+                  </div>
+
+                  {/* Week-over-week badge */}
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Week-over-week:</span>
+                    <DeltaBadge pct={statistics.upload_analytics?.prediction_growth_pct ?? 0} />
+                  </div>
+
+                  {/* Top predicted diseases */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                      Top Detected Diseases
+                    </p>
+                    {(statistics.upload_analytics?.top_predictions ?? []).length === 0 ? (
+                      <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No predictions recorded yet</p>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {(statistics.upload_analytics?.top_predictions ?? []).slice(0, 5).map((pred, i) => {
+                          const predMax = statistics.upload_analytics?.top_predictions[0]?.count || 1;
+                          return (
+                            <div key={pred.name}>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                                  {i === 0 && <span>🥇</span>}
+                                  {pred.name}
+                                </span>
+                                <span className="text-gray-500 dark:text-gray-400 text-xs">{pred.count} scans</span>
+                              </div>
+                              <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${(pred.count / predMax) * 100}%` }}
+                                  transition={{ duration: 1.0, delay: 0.1 + i * 0.1, ease: 'easeOut' }}
+                                  className="h-full rounded-full bg-gradient-to-r from-purple-400 to-violet-500"
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Weather Search Analytics Card ── */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700/50 relative">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 via-blue-500 to-cyan-500 rounded-t-2xl" />
+
+                  {/* Header */}
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="p-1.5 bg-sky-100 dark:bg-sky-900/30 rounded-lg">
+                      <CloudSun size={18} className="text-sky-600 dark:text-sky-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Weather Searches (Weather Page)</h3>
+                  </div>
+
+                  {/* KPI row */}
+                  <div className="grid grid-cols-3 gap-3 mb-5">
+                    <div className="bg-sky-50 dark:bg-sky-900/20 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-black text-sky-600 dark:text-sky-400">
+                        {statistics.weather_analytics?.total_searches ?? 0}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Total Searches</p>
+                    </div>
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-black text-blue-600 dark:text-blue-400">
+                        {statistics.weather_analytics?.searches_this_week ?? 0}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">This Week</p>
+                    </div>
+                    <div className="bg-cyan-50 dark:bg-cyan-900/20 rounded-xl p-3 text-center">
+                      <p className="text-2xl font-black text-cyan-600 dark:text-cyan-400">
+                        {statistics.weather_analytics?.searches_period ?? 0}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">This Period</p>
+                    </div>
+                  </div>
+
+                  {/* Week-over-week badge */}
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Week-over-week:</span>
+                    <DeltaBadge pct={statistics.weather_analytics?.weather_growth_pct ?? 0} />
+                  </div>
+
+                  {/* Top searched locations */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                      <MapPin size={12} />
+                      Top Searched Locations
+                    </p>
+                    {(statistics.weather_analytics?.top_locations ?? []).length === 0 ? (
+                      <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No weather searches recorded yet</p>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {(statistics.weather_analytics?.top_locations ?? []).slice(0, 5).map((loc, i) => {
+                          const locMax = statistics.weather_analytics?.top_locations[0]?.count || 1;
+                          return (
+                            <div key={loc.location}>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                                  {i === 0 && <span>📍</span>}
+                                  {loc.location}
+                                </span>
+                                <span className="text-gray-500 dark:text-gray-400 text-xs">{loc.count} searches</span>
+                              </div>
+                              <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${(loc.count / locMax) * 100}%` }}
+                                  transition={{ duration: 1.0, delay: 0.1 + i * 0.1, ease: 'easeOut' }}
+                                  className="h-full rounded-full bg-gradient-to-r from-sky-400 to-blue-500"
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>
