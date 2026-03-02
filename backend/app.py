@@ -6,6 +6,9 @@ from chat import handle_chat
 from voice import handle_voice
 from report import generate_farming_report
 
+# Node.js weather server lifecycle
+from node_server import start_weather_server
+
 # Services
 from services.db_service import (
     get_chat_history, 
@@ -20,9 +23,14 @@ from services.email_service import mail
 from routes.auth_routes import auth_bp, token_required, verify_token
 from routes.otp_routes import otp_bp
 from routes.feedback_routes import feedback_bp
+from routes.analytics_routes import analytics_bp
+from routes.weather_routes import weather_bp
 
 # Initialize Firebase Admin SDK
 initialize_firebase()
+
+# Start the Node.js weather & soil analysis server
+start_weather_server()
 
 app = Flask(__name__)
 CORS(app, origins="*")
@@ -41,6 +49,8 @@ mail.init_app(app)
 app.register_blueprint(auth_bp)
 app.register_blueprint(otp_bp)
 app.register_blueprint(feedback_bp)
+app.register_blueprint(analytics_bp)
+app.register_blueprint(weather_bp)   # weather & soil proxy → Node server
 
 # -------------------- HEALTH CHECK --------------------
 @app.route("/")
@@ -253,6 +263,25 @@ def predict_proxy():
         # Map to the shape the frontend expects: {"disease": "<label>", "confidence": 92}
         disease    = raw.get('top') or raw.get('disease') or 'Unknown'
         confidence = raw.get('confidence', 0)
+
+        # Persist the prediction — registered users only (trial users are excluded)
+        try:
+            from services.db_service import save_disease_prediction
+            token = request.headers.get("Authorization", "")
+            uid = None
+            if token.startswith("Bearer "):
+                payload = verify_token(token.split(" ")[1])
+                if payload:
+                    uid = payload.get("user_id")
+            if uid:   # only save for authenticated / registered users
+                save_disease_prediction(
+                    disease=disease.replace("_", " "),
+                    confidence=round(confidence * 100, 1),
+                    user_id=uid,
+                    image_name=filename,
+                )
+        except Exception:
+            pass  # never block a prediction result over analytics
 
         return jsonify({
             "disease":    disease,
