@@ -229,7 +229,7 @@ const LoginPage = () => {
                       autoFocus onKeyPress={(e) => { if (e.key === 'Enter' && otp.length === 6) handleVerifyOtp(); }} />
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">OTP expires in 10 minutes</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">OTP expires in 5 minutes</p>
                     <button type="button" onClick={async () => {
                       try {
                         const res = await fetch(`${API_BASE_URL}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: formData.email, password: formData.password }) });
@@ -443,7 +443,7 @@ const LoginPage = () => {
                   <input type="text" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Enter 6-digit OTP" maxLength={6}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 text-center text-lg tracking-widest transition-all duration-300" autoFocus />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center transition-colors duration-300">OTP expires in 10 minutes</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center transition-colors duration-300">OTP expires in 5 minutes</p>
               </div>
               <div className="flex space-x-3">
                 <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}

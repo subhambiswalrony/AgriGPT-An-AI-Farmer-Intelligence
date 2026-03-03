@@ -271,7 +271,7 @@ const SignupPage = () => {
                       autoFocus onKeyPress={(e) => { if (e.key === 'Enter' && otp.length === 6) handleVerifyOtp(); }} />
                   </div>
                   <div className="flex items-center justify-between mt-2">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">OTP expires in 10 minutes</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">OTP expires in 5 minutes</p>
                     <button type="button" onClick={async () => {
                       try {
                         const res = await fetch(`${API_BASE_URL}/api/signup`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: formData.name, email: formData.email, password: formData.password }) });
