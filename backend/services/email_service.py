@@ -111,9 +111,12 @@ def send_password_changed_email(to: str, name: str) -> None:
     Template : emails/password_changed.html
     Subject  : 🔒 Your AgriGPT Password Was Changed Successfully
     """
+    from datetime import datetime, timezone
+    change_date = datetime.now(timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC")
     send_email(
         to=to,
         subject="🔒 Your AgriGPT Password Was Changed Successfully",
         template_path="password_changed.html",
-        name=name
+        name=name,
+        change_date=change_date
     )
