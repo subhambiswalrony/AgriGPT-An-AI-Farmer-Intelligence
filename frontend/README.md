@@ -990,10 +990,10 @@ Before submitting PR, ensure:
 ## 👥 Team
 
 **AgriGPT Frontend Team**
-- **Subham Biswal** - Full Stack Developer
-- **Tusar Kanta Das** - Frontend Developer
-- **Vivekananda Champati** - UI/UX Designer
-- **Swabhiman Mohanty** - Quality Assurance
+- **Subham Biswal** - 💬 Chat System Developer (frontend + backend)
+- **Vivekananda Champati** - 🌿 Upload & Disease Detection Developer (frontend + backend)
+- **Tusarkanta Das** - 🌦️ Weather & Soil System Developer (frontend + backend)
+- **Swabhiman Mohanty** - 📄 Report System Developer (frontend + backend)
 
 ## 📄 License
 
@@ -1042,7 +1042,7 @@ Special thanks to:
 
 **Built with ❤️ for Indian Farmers** 🌾
 
-**Last Updated**: February 2026 | **Version**: 2.0
+**Last Updated**: March 2026 | **Version**: 2.0
 
 **Frontend Documentation** | [Backend Documentation](../backend/README.md) | [Main README](../README.md)
 
