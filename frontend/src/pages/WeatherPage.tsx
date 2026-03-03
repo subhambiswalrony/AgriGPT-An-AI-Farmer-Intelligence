@@ -23,9 +23,20 @@ import {
   Activity,
   Zap,
   X,
-  Waves
+  Waves,
+  Cloud
 } from 'lucide-react';
 import TutorialModal from '../components/TutorialModal';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip as RechartsTooltip, ResponsiveContainer,
+  Legend,
+} from 'recharts';
+
+const windDir = (deg: number): string => {
+  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  return dirs[Math.round(deg / 45) % 8];
+};
 
 interface WeatherData {
   location: string;
@@ -50,10 +61,29 @@ interface WeatherData {
     high: number;
     low: number;
     condition: string;
+    description: string;
     icon: string;
+    iconCode: string;
     humidity: number;
     windSpeed: number;
+    windGust: number;
+    windDeg: number;
     precipitation: number;
+    feelsLike: number;
+    pressure: number;
+    visibility: number;
+    clouds: number;
+    slots: Array<{
+      hour: number;
+      label: string;
+      temp: number;
+      humidity: number;
+      feelsLike: number;
+      pop: number;
+      wind: number;
+      description: string;
+      iconCode: string;
+    }>;
   }>;
   soil: {
     moisture: number;
@@ -177,19 +207,51 @@ const WeatherPage = () => {
       if (!dayMap[key]) dayMap[key] = [];
       dayMap[key].push(item);
     });
-    const dayLabels = ['Today', 'Tomorrow', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const forecast = Object.entries(dayMap).slice(0, 7).map(([date, items], i) => {
-      const mid = items[Math.floor(items.length / 2)];
+    const todayStr    = new Date().toLocaleDateString();
+    const tomorrowStr  = new Date(Date.now() + 86400000).toLocaleDateString();
+    const dayNames     = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const fmtHour      = (h: number) => h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`;
+    const avg          = (arr: any[], fn: (x: any) => number) =>
+      Math.round(arr.reduce((s, x) => s + fn(x), 0) / arr.length);
+
+    const forecast = Object.entries(dayMap).slice(0, 5).map(([date, items]) => {
+      const mid   = items[Math.floor(items.length / 2)];
+      const slots = items.map((x: any) => {
+        const h = new Date(x.dt * 1000).getHours();
+        return {
+          hour: h, label: fmtHour(h),
+          temp:      parseFloat(x.main.temp.toFixed(1)),
+          humidity:  x.main.humidity,
+          feelsLike: parseFloat(x.main.feels_like.toFixed(1)),
+          pop:       Math.round((x.pop ?? 0) * 100),
+          wind:      parseFloat((x.wind.speed * 3.6).toFixed(1)),
+          description: x.weather[0].description,
+          iconCode:  x.weather[0].icon,
+        };
+      });
+      let dayLabel: string;
+      if      (date === todayStr)    dayLabel = 'Today';
+      else if (date === tomorrowStr) dayLabel = 'Tomorrow';
+      else dayLabel = dayNames[new Date(date).getDay()];
       return {
         date,
-        day: dayLabels[i] ?? date,
-        high: Math.round(Math.max(...items.map((x: any) => x.main.temp_max ?? x.main.temp))),
-        low:  Math.round(Math.min(...items.map((x: any) => x.main.temp_min ?? x.main.temp))),
-        condition: mid.weather[0].main,
-        icon: owmIconToEmoji(mid.weather[0].icon),
-        humidity: Math.round(items.reduce((s: number, x: any) => s + x.main.humidity, 0) / items.length),
-        windSpeed: Math.round(items.reduce((s: number, x: any) => s + x.wind.speed, 0) / items.length * 3.6),
+        day:         dayLabel,
+        high:        Math.round(Math.max(...items.map((x: any) => x.main.temp_max ?? x.main.temp))),
+        low:         Math.round(Math.min(...items.map((x: any) => x.main.temp_min ?? x.main.temp))),
+        condition:   mid.weather[0].main,
+        description: mid.weather[0].description,
+        icon:        owmIconToEmoji(mid.weather[0].icon),
+        iconCode:    mid.weather[0].icon,
+        humidity:    avg(items, (x) => x.main.humidity),
+        windSpeed:   Math.round(avg(items, (x) => x.wind.speed) * 3.6),
+        windGust:    Math.round(Math.max(...items.map((x: any) => (x.wind.gust ?? x.wind.speed) * 3.6))),
+        windDeg:     avg(items, (x) => x.wind.deg),
         precipitation: Math.round((items.reduce((s: number, x: any) => s + (x.pop ?? 0), 0) / items.length) * 100),
+        feelsLike:   avg(items, (x) => x.main.feels_like),
+        pressure:    avg(items, (x) => x.main.pressure),
+        visibility:  Math.round(avg(items, (x) => x.visibility ?? 10000) / 1000),
+        clouds:      avg(items, (x) => x.clouds?.all ?? 0),
+        slots,
       };
     });
 
@@ -250,6 +312,7 @@ const WeatherPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [recommendation, setRecommendation] = useState<string | null>(null);
   const [recLoading, setRecLoading] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<WeatherData['forecast'][0] | null>(null);
 
   const fetchRecommendation = async (raw: Record<string, any>, mapped: WeatherData) => {
     setRecLoading(true);
@@ -508,7 +571,7 @@ const WeatherPage = () => {
             {[
               { icon: '☀️', text: 'Real-time Weather', color: 'from-orange-500 to-yellow-500' },
               { icon: '🌱', text: 'Soil Analysis', color: 'from-green-500 to-emerald-500' },
-              { icon: '📊', text: '7-Day Forecast', color: 'from-blue-500 to-cyan-500' }
+              { icon: '📊', text: '5-Day Forecast', color: 'from-blue-500 to-cyan-500' }
             ].map((pill, idx) => (
               <motion.div
                 key={idx}
@@ -1075,11 +1138,9 @@ const WeatherPage = () => {
               </motion.div>
             </div>
 
-            {/* 7-Day Forecast - Modern Card Design */}
-            <div
-              className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 p-8"
-            >
-              <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center">
+            {/* 5-Day Forecast - Modern Card Design */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 p-8">
+              <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center">
                 <motion.div
                   animate={{ rotate: [0, 5, 0, -5, 0] }}
                   style={{ willChange: 'transform' }}
@@ -1087,25 +1148,33 @@ const WeatherPage = () => {
                 >
                   <Calendar className="mr-3 text-blue-500 dark:text-blue-400" size={28} />
                 </motion.div>
-                7-Day Forecast
+                5-Day Forecast
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-7 gap-4">
+              <p className="text-sm text-gray-400 dark:text-gray-500 mb-6 ml-1">Click any day for detailed hourly breakdown</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                 {weatherData.forecast.map((day, index) => (
                   <motion.div
                     key={index}
                     whileHover={{ scale: 1.05, y: -8 }}
-                    className="group text-center p-4 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/40 dark:to-purple-900/40 border border-blue-200 dark:border-blue-700/40 transition-shadow duration-200 hover:shadow-xl hover:shadow-blue-500/20 cursor-pointer"
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setSelectedDay(day)}
+                    className="group text-center p-4 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/40 dark:to-purple-900/40 border border-blue-200 dark:border-blue-700/40 transition-shadow duration-200 hover:shadow-xl hover:shadow-blue-500/20 cursor-pointer relative overflow-hidden"
                   >
-                    <div className="font-bold text-gray-800 dark:text-gray-100 mb-2 text-base">{day.day}</div>
-                    <motion.div
-                      animate={{ scale: [1, 1.1, 1] }}
-                      style={{ willChange: 'transform' }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="text-4xl mb-2"
-                    >
-                      {day.icon}
-                    </motion.div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 font-medium">{day.condition}</div>
+                    {/* Tap hint badge */}
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[9px] bg-blue-500/20 text-blue-600 dark:text-blue-300 rounded-full px-1.5 py-0.5 font-semibold">Details</span>
+                    </div>
+                    <div className="font-bold text-gray-800 dark:text-gray-100 mb-1 text-base">{day.day}</div>
+                    <div className="text-[10px] text-gray-400 dark:text-gray-500 mb-2">{day.date}</div>
+                    {/* OWM weather icon */}
+                    <div className="flex justify-center mb-1">
+                      <img
+                        src={`https://openweathermap.org/img/wn/${day.iconCode}@2x.png`}
+                        alt={day.condition}
+                        className="w-14 h-14 drop-shadow-lg"
+                      />
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 font-medium capitalize">{day.description}</div>
                     {/* High / Low */}
                     <div className="flex justify-center gap-2 text-sm mb-2">
                       <span className="font-bold text-red-500 dark:text-red-400">{day.high}°</span>
@@ -1753,7 +1822,7 @@ const WeatherPage = () => {
           },
           {
             title: 'Read the Forecast',
-            description: 'Scroll down to see the 7-day weather forecast including temperature highs/lows, humidity, wind, and precipitation for each day.',
+            description: 'Scroll down to see the 5-day weather forecast including temperature highs/lows, humidity, wind, and precipitation for each day. Click any day card for an hourly breakdown with charts.',
             icon: <CloudRain size={28} />,
           },
           {
@@ -1769,6 +1838,195 @@ const WeatherPage = () => {
           },
         ]}
       />
+
+      {/* ══════════════════════════════════════
+          Day Detail Modal
+      ══════════════════════════════════════ */}
+      <AnimatePresence>
+        {selectedDay && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            onClick={() => setSelectedDay(null)}
+          >
+            <motion.div
+              className="bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700"
+              style={{ willChange: 'transform' }}
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Drag handle */}
+              <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
+                <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+              </div>
+
+              {/* ─── Header — STICKY inside flex column ──── */}
+              <div className="shrink-0 flex items-start justify-between px-6 pt-4 pb-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-t-3xl z-10">
+                <div className="flex items-center gap-4">
+                  <img
+                    src={`https://openweathermap.org/img/wn/${selectedDay.iconCode}@2x.png`}
+                    alt={selectedDay.condition}
+                    className="w-16 h-16 drop-shadow-lg"
+                  />
+                  <div>
+                    <div className="text-2xl font-extrabold text-gray-800 dark:text-gray-100">{selectedDay.day}</div>
+                    <div className="text-sm text-gray-400 dark:text-gray-500 capitalize">{selectedDay.date} · {selectedDay.description}</div>
+                    <div className="flex gap-3 mt-1">
+                      <span className="text-red-500 font-bold text-lg">{selectedDay.high}°C</span>
+                      <span className="text-blue-400 font-semibold text-lg">{selectedDay.low}°C</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedDay(null)}
+                  className="shrink-0 ml-2 p-2.5 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  aria-label="Close"
+                >
+                  <X size={18} className="text-gray-700 dark:text-gray-200" />
+                </button>
+              </div>
+
+              {/* ─── Scrollable body ─────────────────────── */}
+              <div
+                className="overflow-y-auto overscroll-contain px-6 py-5 space-y-6"
+                style={{
+                  WebkitOverflowScrolling: 'touch',
+                  willChange: 'scroll-position',
+                  transform: 'translateZ(0)',
+                  contain: 'paint',
+                } as React.CSSProperties}
+              >
+                {/* ─── Stats Grid ─────────────────────────── */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: 'Feels Like', value: `${selectedDay.feelsLike}°C`, icon: <Thermometer size={16} className="text-orange-400" /> },
+                    { label: 'Humidity',   value: `${selectedDay.humidity}%`,   icon: <Droplets size={16} className="text-blue-400" /> },
+                    { label: 'Pressure',   value: `${selectedDay.pressure} hPa`, icon: <Gauge size={16} className="text-purple-400" /> },
+                    { label: 'Visibility', value: `${selectedDay.visibility} km`, icon: <Eye size={16} className="text-cyan-400" /> },
+                    { label: 'Wind',       value: `${selectedDay.windSpeed} km/h ${windDir(selectedDay.windDeg)}`, icon: <Wind size={16} className="text-teal-400" /> },
+                    { label: 'Wind Gust',  value: `${selectedDay.windGust} km/h`, icon: <Zap size={16} className="text-yellow-400" /> },
+                    { label: 'Cloud Cover',value: `${selectedDay.clouds}%`,       icon: <Cloud size={16} className="text-gray-400" /> },
+                    { label: 'Rain Chance', value: `${selectedDay.precipitation}%`, icon: <CloudRain size={16} className="text-indigo-400" /> },
+                  ].map((s) => (
+                    <div key={s.label} className="bg-gray-50 dark:bg-gray-800/60 rounded-2xl p-3 flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wide">
+                        {s.icon}{s.label}
+                      </div>
+                      <div className="text-sm font-bold text-gray-800 dark:text-gray-100">{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ─── Temperature Chart ───────────────────── */}
+                {selectedDay.slots.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                      <Thermometer size={15} className="text-orange-400" /> Temperature (°C)
+                    </h4>
+                    <div className="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-3">
+                      <ResponsiveContainer width="100%" height={160}>
+                        <LineChart data={selectedDay.slots} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" />
+                          <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                          <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={['auto', 'auto']} />
+                          <RechartsTooltip
+                            contentStyle={{ background: 'rgba(17,24,39,0.9)', border: 'none', borderRadius: '12px', fontSize: '12px' }}
+                            labelStyle={{ color: '#e5e7eb' }}
+                            itemStyle={{ color: '#f97316' }}
+                            formatter={(v: number) => [`${v}°C`, 'Temp']}
+                          />
+                          <Line type="monotone" dataKey="temp" stroke="#f97316" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
+                          <Line type="monotone" dataKey="feelsLike" stroke="#fb923c" strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                      <p className="text-[10px] text-gray-400 mt-1 text-center">Solid = actual · Dashed = feels like</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* ─── Humidity & Rain Chart ───────────────── */}
+                {selectedDay.slots.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                      <Droplets size={15} className="text-blue-400" /> Humidity (%) & Rain Chance (%)
+                    </h4>
+                    <div className="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-3">
+                      <ResponsiveContainer width="100%" height={160}>
+                        <LineChart data={selectedDay.slots} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" />
+                          <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                          <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={[0, 100]} />
+                          <RechartsTooltip
+                            contentStyle={{ background: 'rgba(17,24,39,0.9)', border: 'none', borderRadius: '12px', fontSize: '12px' }}
+                            labelStyle={{ color: '#e5e7eb' }}
+                            formatter={(v: number, name: string) => [`${v}%`, name === 'humidity' ? 'Humidity' : 'Rain Chance']}
+                          />
+                          <Legend formatter={(v) => v === 'humidity' ? 'Humidity' : 'Rain Chance'} iconSize={10} wrapperStyle={{ fontSize: '11px' }} />
+                          <Line type="monotone" dataKey="humidity" stroke="#38bdf8" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
+                          <Line type="monotone" dataKey="pop" stroke="#818cf8" strokeWidth={2} strokeDasharray="4 2" dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+
+                {/* ─── Wind Speed Chart ─────────────────────── */}
+                {selectedDay.slots.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                      <Wind size={15} className="text-teal-400" /> Wind Speed (km/h)
+                    </h4>
+                    <div className="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-3">
+                      <ResponsiveContainer width="100%" height={120}>
+                        <LineChart data={selectedDay.slots} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" />
+                          <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                          <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={['auto', 'auto']} />
+                          <RechartsTooltip
+                            contentStyle={{ background: 'rgba(17,24,39,0.9)', border: 'none', borderRadius: '12px', fontSize: '12px' }}
+                            labelStyle={{ color: '#e5e7eb' }}
+                            formatter={(v: number) => [`${v} km/h`, 'Wind']}
+                          />
+                          <Line type="monotone" dataKey="wind" stroke="#2dd4bf" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
+
+                {/* ─── 3-Hour Slot Details ─────────────────── */}
+                <div>
+                  <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <Calendar size={15} className="text-blue-400" /> 3-Hour Breakdown
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {selectedDay.slots.map((slot, si) => (
+                      <div key={si} className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-2.5 text-center">
+                        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{slot.label}</div>
+                        <img
+                          src={`https://openweathermap.org/img/wn/${slot.iconCode}.png`}
+                          alt={slot.description}
+                          className="w-8 h-8 mx-auto"
+                        />
+                        <div className="text-sm font-bold text-gray-800 dark:text-gray-100">{slot.temp}°</div>
+                        <div className="text-[10px] text-blue-500">{slot.humidity}% 💧</div>
+                        <div className="text-[10px] text-indigo-500">{slot.pop}% 🌧</div>
+                        <div className="text-[10px] text-teal-500">{slot.wind} km/h</div>
+                        <div className="text-[10px] text-gray-400 capitalize mt-0.5">{slot.description}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>{/* end scrollable body */}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 };
