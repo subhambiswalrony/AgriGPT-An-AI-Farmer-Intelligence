@@ -156,7 +156,7 @@ app.get("/api/agriculture-data", async (req, res) => {
             lon: location.lon,
             appid: process.env.OPENWEATHER_API_KEY,
             units: "metric",
-            cnt: 56
+            cnt: 40
           }
         })
       )
