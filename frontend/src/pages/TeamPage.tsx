@@ -209,7 +209,7 @@ const TeamPage = () => {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="flex flex-wrap gap-6 mb-12 justify-center items-center max-w-6xl mx-auto"
+          className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-12 max-w-6xl mx-auto"
         >
           {teamMembers.map((member, index) => (
             <motion.div
@@ -222,9 +222,9 @@ const TeamPage = () => {
                 y: -10,
                 transition: { duration: 0.3 }
               }}
-              className="group w-64 flex-shrink-0"
+              className="group flex flex-col h-full"
             >
-              <div className="relative backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-green-200/30 dark:border-green-700/30 min-h-[480px] flex flex-col">
+              <div className="relative backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-green-200/30 dark:border-green-700/30 flex flex-col flex-1">
                 {/* Gradient Background on Hover */}
                 <motion.div
                   className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-emerald-500/10 to-teal-500/10 dark:from-green-500/20 dark:via-emerald-500/20 dark:to-teal-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -257,7 +257,7 @@ const TeamPage = () => {
                 </div>
 
                 {/* Card Content */}
-                <div className="relative pt-6 p-6 text-center">
+                <div className="relative pt-6 p-6 text-center flex flex-col flex-1">
                   <motion.h3
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -271,7 +271,7 @@ const TeamPage = () => {
                     {member.role}
                   </p>
 
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 leading-relaxed transition-colors duration-300">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4 leading-relaxed transition-colors duration-300 flex-grow">
                     {member.description}
                   </p>
 
