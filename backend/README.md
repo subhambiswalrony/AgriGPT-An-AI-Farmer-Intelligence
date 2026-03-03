@@ -459,7 +459,7 @@ backend/
 
 **Routes (API Endpoints):**
 - `auth_routes.py` - `/api/signup`, `/api/login`, `/api/verify-login-otp`, `/api/verify-signup-otp`, `/api/auth/google`, `/api/link-google`, `/api/update-profile`, `/api/change-password`, `/api/create-password`, `/api/delete-account`
-- `otp_routes.py` - `/api/send-otp`, `/api/verify-otp`, `/api/reset-password`
+- `otp_routes.py` - `/api/send-otp`, `/api/verify-otp`; debug: `/api/otp/status`, `/api/otp/cleanup`
 - `feedback_routes.py` - Pure CRUD: `/api/feedback` (submit), `/api/admin/feedbacks` (list + 7-day auto-delete), `/api/admin/feedback/<id>` (delete), `/api/admin/feedback/<id>/status` (update status)
 - `analytics_routes.py` - `/api/check-developer` (developer access check), `/api/admin/statistics` (comprehensive analytics across 8 MongoDB collections)
 - `weather_routes.py` - Thin proxy blueprint; forwards all 4 weather/soil endpoints from Flask (port 5000) to the internal Node.js server (port 3020). Also saves `/api/agriculture-data` searches (city + full output JSON) to MongoDB via `save_weather_search` for admin analytics.
@@ -1364,10 +1364,10 @@ We welcome contributions to make AgriGPT better for Indian farmers!
 ## 👥 Team
 
 **AgriGPT Development Team**
-- **Subham Biswal** - Full Stack Developer
-- **Vivekananda Champati** - Backend Developer
-- **Tusar Kanta Das** - Frontend Developer
-- **Swabhiman Mohanty** - AI/ML Integration
+- **Subham Biswal** - 💬 Chat System Developer (frontend + backend)
+- **Vivekananda Champati** - 🌿 Upload & Disease Detection Developer (frontend + backend)
+- **Tusarkanta Das** - 🌦️ Weather & Soil System Developer (frontend + backend)
+- **Swabhiman Mohanty** - 📄 Report System Developer (frontend + backend)
 
 ## 📄 License
 
@@ -1430,7 +1430,7 @@ Special thanks to:
 
 **Built with ❤️ for Indian Farmers** 🌾
 
-**Last Updated**: February 2026 | **Version**: 2.0
+**Last Updated**: March 2026 | **Version**: 2.0
 
 [⬆ Back to Top](#-agrigpt---agricultural-expert-chatbot-backend)
 
