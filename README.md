@@ -1607,23 +1607,27 @@ We welcome contributions from the community! Here's how you can help make AgriGP
   <tr>
     <td align="center" width="25%">
       <strong>Subham Biswal</strong><br>
-      <em>Full Stack Developer & Project Lead</em><br>
-      <sub>Frontend Architecture, Backend API Design, Firebase Integration</sub>
+      <em>💬 Chat System Developer</em><br>
+      <sub>Built the full-stack Chat System — AI chat interface, voice input, multi-session management, and Faster Whisper speech-to-text integration</sub><br><br>
+      <sub><code>Python</code> <code>Flask</code> <code>React</code> <code>Faster Whisper</code> <code>MongoDB</code></sub>
     </td>
     <td align="center" width="25%">
       <strong>Vivekananda Champati</strong><br>
-      <em>Backend Developer & AI Integration</em><br>
-      <sub>Gemini AI Integration, Database Design, Voice Processing</sub>
+      <em>🌿 Upload & Disease Detection Developer</em><br>
+      <sub>Built the full-stack AI Plant Disease Detection system — leaf image upload UI, Flask prediction proxy, and ML model integration</sub><br><br>
+      <sub><code>Python</code> <code>Flask</code> <code>React</code> <code>TypeScript</code> <code>TailwindCSS</code></sub>
     </td>
     <td align="center" width="25%">
-      <strong>Tusar Kanta Das</strong><br>
-      <em>Frontend Developer & UI/UX Designer</em><br>
-      <sub>React Components, TailwindCSS Styling, Performance Optimization</sub>
+      <strong>Tusarkanta Das</strong><br>
+      <em>🌦️ Weather & Soil System Developer</em><br>
+      <sub>Built the full-stack Weather & Soil Analysis system — Node.js microservice, real-time weather dashboard, AI soil analysis, and hourly forecast charts</sub><br><br>
+      <sub><code>Node.js</code> <code>Express</code> <code>React</code> <code>OpenWeatherMap</code> <code>Gemini AI</code></sub>
     </td>
     <td align="center" width="25%">
       <strong>Swabhiman Mohanty</strong><br>
-      <em>Quality Assurance & Testing</em><br>
-      <sub>Testing, Documentation, Language Support, Deployment</sub>
+      <em>📄 Report System Developer</em><br>
+      <sub>Built the full-stack Farming Report system — AI-powered report generation in 13 languages, PDF download, region-specific farming calendar and fertilizer plans</sub><br><br>
+      <sub><code>Python</code> <code>Flask</code> <code>React</code> <code>Gemini AI</code> <code>WeasyPrint</code></sub>
     </td>
   </tr>
 </table>
@@ -1756,7 +1760,7 @@ We extend our heartfelt gratitude to:
 
 **Built with ❤️ for Indian Farmers** 🌾
 
-**Last Updated**: February 2026 | **Version**: 2.0
+**Last Updated**: March 2026 | **Version**: 2.0
 
 **A Project Dedicated to Empowering Indian Agriculture Through Technology**
 
