@@ -11,7 +11,7 @@ const HomePage = React.lazy(() => import('./pages/HomePage'));
 const ChatPage = React.lazy(() => import('./pages/ChatPage'));
 const UploadPage = React.lazy(() => import('./pages/UploadPage'));
 const ReportPage = React.lazy(() => import('./pages/ReportPage'));
-// const TeamPage = React.lazy(() => import('./pages/TeamPage'));
+const TeamPage = React.lazy(() => import('./pages/TeamPage'));
 const WeatherPage = React.lazy(() => import('./pages/WeatherPage'));
 const LoginPage = React.lazy(() => import('./pages/LoginPage'));
 const SignupPage = React.lazy(() => import('./pages/SignupPage'));
@@ -63,7 +63,7 @@ function App() {
                 <Route path="/chat" element={<ChatPage />} />
                 <Route path="/upload" element={<UploadPage />} />
                 <Route path="/report" element={<ReportPage />} />
-                {/* <Route path="/team" element={<TeamPage />} /> */}
+                <Route path="/team" element={<TeamPage />} />
                 <Route path="/weather" element={<WeatherPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />

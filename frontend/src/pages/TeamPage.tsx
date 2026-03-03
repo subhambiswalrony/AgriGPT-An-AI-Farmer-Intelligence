@@ -5,18 +5,18 @@ import Footer from '../components/Footer';
 import viveka from '../assets/vivekananda.jpg';
 import tusar from '../assets/tusar.jpeg';
 import subham from '../assets/Rony.jpg';
-// import swabhiman from '../assets/swabhiman.jpeg';
+import swabhiman from '../assets/swabhiman.jpeg';
 
 
 const TeamPage = () => {
   const teamMembers = [
     {
       name: 'Subham Biswal',
-      role: '🧠 Contributing Developer',
-      description: 'Handled the Chat System, voice interaction & Report Generation',
+      role: '💬 Chat System Developer',
+      description: 'Built the full-stack Chat System — AI chat interface, voice input, multi-session management, and Faster Whisper speech-to-text integration',
       icon: MessageCircleCode, 
       gradient: 'from-green-400 to-green-600',
-      skills: ['Python', 'Flask API', 'Faster Whisper', 'MongoDB'],
+      skills: ['Python', 'Flask', 'React', 'Faster Whisper', 'MongoDB'],
       image: subham,
       social: {
         github: 'https://github.com/subhambiswalrony',
@@ -26,11 +26,11 @@ const TeamPage = () => {
     },
     {
       name: 'Vivekananda Champati',
-      role: '🎨 Solution Lead',
-      description: 'Handled Disease Prediction and gave contribution to Frontend Development',
+      role: '🌿 Upload & Disease Detection Developer',
+      description: 'Built the full-stack AI Plant Disease Detection system — leaf image upload UI, Flask prediction proxy, and ML model integration',
       icon: Cpu, 
       gradient: 'from-purple-400 to-purple-600',
-      skills: ['TypeScript', 'React JS', 'Tailwind CSS', 'MongoDB'],
+      skills: ['Python', 'Flask', 'React', 'TypeScript', 'TailwindCSS'],
       image: viveka,
       social: {
         github: 'https://github.com/champati-v',
@@ -40,11 +40,11 @@ const TeamPage = () => {
     },
     {
       name: 'Tusarkanta Das',
-      role: '🤖 ML Developer',
-      description: 'Handled the Weather Details and Soil prediction',
-      icon: BrainCircuit, // Changed from Bot
+      role: '🌦️ Weather & Soil System Developer',
+      description: 'Built the full-stack Weather & Soil Analysis system — Node.js microservice, real-time weather dashboard, AI soil analysis, and hourly forecast charts',
+      icon: BrainCircuit,
       gradient: 'from-blue-400 to-blue-600',
-      skills: ['Python', 'Scikit-learn', 'NLP'],
+      skills: ['Node.js', 'Express', 'React', 'OpenWeatherMap', 'Gemini AI'],
       image: tusar,
       social: {
         github: 'https://github.com/Tusar2202196',
@@ -53,20 +53,20 @@ const TeamPage = () => {
       }
     },
     
-    // {
-    //   name: 'Swabhiman Mohanty',
-    //   role: '🧪 Data Analyst',
-    //   description: 'Collected and handled data for better security and performance',
-    //   icon: BarChart4, 
-    //   gradient: 'from-orange-400 to-orange-600',
-    //   skills: ['SQL', 'Pandas', 'Data Visualization'],
-    //   image: swabhiman,
-    //   social: {
-    //     github: 'https://github.com/Swaviman-git',
-    //     linkedin: 'https://www.linkedin.com/in/swaviman-mohanty-57355b291',
-    //     email: 'swavimanmohanty2004@gmail.com'
-    //   }
-    // }
+    {
+      name: 'Swabhiman Mohanty',
+      role: '📄 Report System Developer',
+      description: 'Built the full-stack Farming Report system — AI-powered report generation in 13 languages, PDF download, region-specific farming calendar and fertilizer plans',
+      icon: BarChart4, 
+      gradient: 'from-orange-400 to-orange-600',
+      skills: ['Python', 'Flask', 'React', 'Gemini AI', 'WeasyPrint'],
+      image: swabhiman,
+      social: {
+        github: 'https://github.com/Swaviman-git',
+        linkedin: 'https://www.linkedin.com/in/swaviman-mohanty-57355b291',
+        email: 'swavimanmohanty2004@gmail.com'
+      }
+    }
   ];
 
   const containerVariants = {
@@ -224,7 +224,7 @@ const TeamPage = () => {
               }}
               className="group w-64 flex-shrink-0"
             >
-              <div className="relative backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-green-200/30 dark:border-green-700/30 h-[480px] flex flex-col">
+              <div className="relative backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-green-200/30 dark:border-green-700/30 min-h-[480px] flex flex-col">
                 {/* Gradient Background on Hover */}
                 <motion.div
                   className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-emerald-500/10 to-teal-500/10 dark:from-green-500/20 dark:via-emerald-500/20 dark:to-teal-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -357,19 +357,9 @@ const TeamPage = () => {
           </div>
 
           <div className="relative z-10">
-            <motion.div
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", delay: 0.7 }}
-              className="flex items-center justify-center mb-4"
-            >
-              <motion.div
-                animate={{ rotate: [0, 360] }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-              >
-                <Award size={48} className="text-yellow-300" />
-              </motion.div>
-            </motion.div>
+            <div className="flex items-center justify-center mb-4">
+              <Award size={48} className="text-yellow-300" />
+            </div>
 
             <h2 className="text-3xl font-bold mb-4 flex items-center justify-center gap-2">
               <span>🏆</span>
@@ -389,16 +379,7 @@ const TeamPage = () => {
                 whileHover={{ scale: 1.05, y: -5 }}
                 className="backdrop-blur-sm bg-white/10 rounded-2xl p-6 border border-white/20"
               >
-                <motion.div
-                  animate={{ 
-                    y: [0, -10, 0],
-                    rotate: [0, 5, -5, 0]
-                  }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                  className="text-4xl mb-3"
-                >
-                  🌱
-                </motion.div>
+                <div className="text-4xl mb-3">🌱</div>
                 <h3 className="font-bold text-xl mb-2">Sustainability</h3>
                 <p className="text-sm opacity-90">Eco-friendly farming solutions</p>
               </motion.div>
@@ -410,15 +391,7 @@ const TeamPage = () => {
                 whileHover={{ scale: 1.05, y: -5 }}
                 className="backdrop-blur-sm bg-white/10 rounded-2xl p-6 border border-white/20"
               >
-                <motion.div
-                  animate={{ 
-                    rotate: [0, 360]
-                  }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                  className="text-4xl mb-3"
-                >
-                  🤖
-                </motion.div>
+                <div className="text-4xl mb-3">🤖</div>
                 <h3 className="font-bold text-xl mb-2">AI-Powered</h3>
                 <p className="text-sm opacity-90">Advanced machine learning</p>
               </motion.div>
@@ -430,15 +403,7 @@ const TeamPage = () => {
                 whileHover={{ scale: 1.05, y: -5 }}
                 className="backdrop-blur-sm bg-white/10 rounded-2xl p-6 border border-white/20"
               >
-                <motion.div
-                  animate={{ 
-                    scale: [1, 1.2, 1]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="text-4xl mb-3"
-                >
-                  👨‍🌾
-                </motion.div>
+                <div className="text-4xl mb-3">👨‍🌾</div>
                 <h3 className="font-bold text-xl mb-2">Farmer-First</h3>
                 <p className="text-sm opacity-90">Designed for Indian farmers</p>
               </motion.div>

@@ -137,7 +137,7 @@ const Navigation = () => {
     { path: '/chat', icon: MessageCircle, label: 'Chat' },
     { path: '/upload', icon: Upload, label: 'Upload' },
     { path: '/report', icon: FileText, label: 'Report' },
-    // { path: '/team', icon: Users, label: 'Team' },
+    { path: '/team', icon: Users, label: 'Team' },
     { path: '/weather', icon: Cloud, label: 'Weather' },
   ];
 
