@@ -51,7 +51,8 @@ def check_developer():
 def get_admin_statistics():
     """
     Comprehensive insight-driven statistics for the admin dashboard.
-    Scans all 9 AgriGPT MongoDB collections.
+    Scans 8 AgriGPT MongoDB collections (users, chat_history, chat_sessions,
+    farming_reports, user_feedback, developers, disease_predictions, weather_searches).
 
     Query params
     ------------
