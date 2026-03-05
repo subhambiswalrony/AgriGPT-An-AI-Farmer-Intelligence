@@ -162,7 +162,7 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
                   bg-white dark:bg-gray-900
                   border-2 ${colors.border}
                 `}
-                style={{ height: '490px' }}
+                style={{ height: '540px' }}
                 initial={{ scale: 0.85, opacity: 0, y: 30 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.85, opacity: 0, y: 30 }}
@@ -221,7 +221,7 @@ const TutorialModal: React.FC<TutorialModalProps> = ({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.16, ease: 'easeOut' }}
-                      className="absolute inset-0 px-6 pt-4 flex flex-col"
+                      className="absolute inset-0 px-6 pt-4 pb-3 flex flex-col overflow-y-auto"
                     >
                       {/* Icon */}
                       <div className="flex justify-center mb-3 shrink-0">
