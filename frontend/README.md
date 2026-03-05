@@ -63,15 +63,17 @@ A modern, high-performance React + TypeScript frontend for the AgriGPT agricultu
 ### 4. **Farming Report Generation**
 - **AI-powered comprehensive farming reports** in 13+ languages
 - Language selection dropdown for report generation
-- Interactive form for crop name and location details
+- Interactive form for crop name, district, state, and farming type
 - **PDF download capability** with professional formatting
 - Report history access for authenticated users
-- Detailed farming advice in 4 sections:
-  - 🌱 Sowing Advice (timing, depth, spacing, watering)
-  - 🌿 Fertilizer Plan (NPK quantities, organic manure, micronutrients)
-  - ☁️ Weather Protection (sun, rain, cold, wind strategies)
-  - 📅 Farming Calendar (week-by-week activities)
-- Beautiful emoji-based section formatting
+- **7 analytical sections** covering the full suitability picture:
+  - 🌡️ Environmental Summary (auto-fetched temp, humidity, soil type, annual rainfall)
+  - 🌱 Crop Requirements (ideal parameters from AgriGPT crop database)
+  - 🔬 Compatibility Analysis (factor-by-factor: temp, humidity, rainfall, soil)
+  - 📊 Suitability Score (0–100 with classification: Highly Suitable / Moderately Suitable / Risky / Not Recommended)
+  - ⚠️ Quality Impact Analysis (risks and yield quality effects)
+  - 💰 Economic Feasibility (market viability for the selected farming type)
+  - ✅ Final Recommendation (3 actionable expert management steps)
 - Print and download options
 
 ### 5. **Weather Dashboard**
@@ -409,6 +411,7 @@ frontend/
 │   │   └── 🖼️ vivekananda.jpg         # Team member photo (Vivekananda Champati)
 │   │
 │   ├── 📁 components/                 # Reusable UI components
+│   │   ├── 📄 AgriGPTLogoAnimation.tsx  # Animated AgriGPT logo (loading/splash screens)
 │   │   ├── 📄 FAQ.tsx                 # FAQ accordion component on home page
 │   │   ├── 📄 Footer.tsx              # Footer with links and copyright
 │   │   ├── 📄 LazyImage.tsx           # Lazy loading image component with Intersection Observer
@@ -443,7 +446,7 @@ frontend/
 │   │   ├── 📄 ReportPage.tsx          # Farming report generation & download
 │   │   ├── 📄 ResetPasswordPage.tsx   # Password reset
 │   │   ├── 📄 SettingsPage.tsx        # User profile & settings management
-│   │   ├── 📄 TeamPage.tsx            # Team member information display (currently disabled)
+│   │   ├── 📄 TeamPage.tsx            # Team member cards with photos, roles, skills, and social links
 │   │   ├── 📄 TermsAndConditionsPage.tsx # Terms and conditions page
 │   │   ├── 📄 UploadPage.tsx          # AI plant disease detection (leaf image upload)
 │   │   └── 📄 WeatherPage.tsx         # Weather dashboard with forecasts
@@ -496,7 +499,7 @@ frontend/
 - `ReportPage.tsx` - Report form (crop, region, language), PDF generation, report history
 - `WeatherPage.tsx` - Weather cards, forecast, location detection
 - `SettingsPage.tsx` - Profile edit, password change, profile picture upload, logout button with confirmation modal, Google account linking, OTP verification
-- `TeamPage.tsx` - Team member cards with photos and roles (currently disabled in routing)
+- `TeamPage.tsx` - Team member cards with photos, roles, skills, and social links
 - `FeedbackPage.tsx` - Feedback form submission with email validation
 - `AdminPanelPage.tsx` - Developer-only dashboard; Recharts-driven statistics from 8 MongoDB collections (users, chat, reports, feedback, disease predictions, weather, engagement, health score), configurable time window (7/14/30/365 days), side-by-side feedback management, delete confirmation modal
 - `TermsAndConditionsPage.tsx` - Full terms and conditions legal page
@@ -504,6 +507,7 @@ frontend/
 
 **Utils:**
 - `debounce.ts` - Debounce function for scroll, search, input optimization
+- `generateReportPDF.ts` - Client-side PDF generation (jsPDF + html2canvas); 7-section color-coded report layout
 - `performance.ts` - Mobile detection, performance utilities
 
 **Build Configuration:**
@@ -594,6 +598,7 @@ Authorization: Bearer <jwt_token>
 - `/weather` - Weather dashboard
 - `/settings` - User settings and profile management (protected)
 - `/feedback` - User feedback form
+- `/team` - Team member profiles page
 - `/admin` - Admin dashboard with statistics & feedback management (developer-only, protected)
 - `/terms` - Terms and conditions page
 - `/reset-password` - Password reset
