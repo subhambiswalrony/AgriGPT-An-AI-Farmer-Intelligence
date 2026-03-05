@@ -152,13 +152,16 @@ HomePage.js       #  25 KB - Home page
 
 2. **Comprehensive Farming Report Generation**
    - AI-generated farming reports in your preferred language
-   - Crop-specific detailed farming guides with 4 key sections:
-     - **🌱 Sowing Advice**: Best timing, depth, spacing, watering schedule (4 detailed points)
-     - **🌿 Fertilizer Plan**: NPK ratios, organic manure quantities, application schedule (4 points)
-     - **☁️ Weather Protection**: Sun, rain, cold, wind protection strategies (4 points)
-     - **📅 Farming Calendar**: Week-by-week activities and milestones (4 points)
+   - Crop-specific agricultural suitability analysis with **7 analytical sections**:
+     - **🌡️ Environmental Summary**: Auto-fetched temperature, humidity, soil type, annual rainfall for your district
+     - **🌱 Crop Requirements**: Ideal growing parameters sourced from AgriGPT's crop database
+     - **🔬 Compatibility Analysis**: Factor-by-factor comparison (temperature, humidity, rainfall, soil type)
+     - **📊 Suitability Score**: 100-point score with classification (Highly Suitable / Moderately Suitable / Risky / Not Recommended)
+     - **⚠️ Quality Impact Analysis**: Risks and yield quality effects from environmental mismatches
+     - **💰 Economic Feasibility**: Market viability and profitability insights for the selected farming type
+     - **✅ Final Recommendation**: 3 actionable expert management recommendations
    - PDF download capability for offline reference
-   - Region-specific recommendations based on your location
+   - District + state + farming type inputs for location-specific analysis
    - Reports saved in database for authenticated users
    - Beautiful emoji-based formatting for easy reading
 
@@ -340,6 +343,7 @@ AgriGPT-Chat-Report_System/
 │   │   ├── 📄 vite-env.d.ts              # Vite type definitions
 │   │   │
 │   │   ├── 📁 components/                # Reusable UI components
+│   │   │   ├── 📄 AgriGPTLogoAnimation.tsx # Animated AgriGPT logo (loading/splash screens)
 │   │   │   ├── 📄 Navigation.tsx         # Nav bar with theme toggle
 │   │   │   ├── 📄 Footer.tsx             # Footer component
 │   │   │   ├── 📄 FAQ.tsx                # FAQ accordion component
@@ -359,7 +363,7 @@ AgriGPT-Chat-Report_System/
 │   │   │   ├── 📄 ReportPage.tsx         # Farming report generation
 │   │   │   ├── 📄 WeatherPage.tsx        # Weather dashboard
 │   │   │   ├── 📄 SettingsPage.tsx       # User profile settings
-│   │   │   ├── 📄 TeamPage.tsx           # Team information (currently disabled)
+│   │   │   ├── 📄 TeamPage.tsx           # Team member cards with photos, roles, skills, and social links
 │   │   │   ├── 📄 FeedbackPage.tsx       # Feedback form
 │   │   │   ├── 📄 AdminPanelPage.tsx     # Admin dashboard (developer-only)
 │   │   │   ├── 📄 TermsAndConditionsPage.tsx # Terms and conditions
@@ -381,6 +385,7 @@ AgriGPT-Chat-Report_System/
 │   │   │
 │   │   ├── 📁 utils/                     # Utility functions
 │   │   │   ├── 📄 debounce.ts            # Debounce utility
+│   │   │   ├── 📄 generateReportPDF.ts   # Client-side PDF generation (jsPDF + html2canvas); 7-section color-coded layout
 │   │   │   └── 📄 performance.ts         # Performance utilities
 │   │   │
 │   │   └── 📁 assets/                    # Static assets
@@ -435,7 +440,12 @@ AgriGPT-Chat-Report_System/
 │   ├── 📄 app.py                         # Flask app entry point
 │   ├── 📄 chat.py                        # Chat handler logic
 │   ├── 📄 voice.py                       # Voice input handler
-│   ├── 📄 report.py                      # Report generation
+│   ├── � report_generator/              # AI farming suitability report engine
+│   │   ├── 📄 __init__.py                # Package init
+│   │   ├── 📄 report.py                  # 7-section AI farming suitability report; auto-fetches env data from Node server
+│   │   └── 📁 dataset/                   # Reference data
+│   │       ├── 📄 crop_requirements.json # Ideal growing parameters per crop
+│   │       └── 📄 state_annual_rainfall.json # State-level annual rainfall data
 │   ├── 📄 make_admin.py                  # Grant/revoke developer access utility
 │   ├── 📄 node_server.py                 # Spawns & manages weather Node.js server as Flask child process
 │   ├── 📄 test_db.py                     # DB test utility
@@ -1008,22 +1018,35 @@ Authorization: Bearer <jwt_token> (optional)
 Content-Type: application/json
 
 {
-  "cropName": "Wheat",
-  "region": "Punjab",
-  "language": "hindi",
-  "user_id": "user_id_here" (or "trial_user")
+  "cropName": "Rice",
+  "district": "Cuttack",
+  "state": "Odisha",
+  "farmingType": "General",
+  "language": "English"
 }
 
 Response:
 {
   "report": {
-    "sowing": ["point1", "point2", "point3", "point4"],
-    "fertilizer": ["point1", "point2", "point3", "point4"],
-    "weather": ["point1", "point2", "point3", "point4"],
-    "calendar": ["point1", "point2", "point3", "point4"]
+    "environmentalSummary": "...",
+    "cropRequirementSummary": "...",
+    "compatibilityAnalysis": "...",
+    "suitabilityScore": "...",
+    "qualityImpactAnalysis": "...",
+    "economicFeasibility": "...",
+    "finalRecommendation": "..."
   },
-  "language": "hindi"
+  "language": "English"
 }
+```
+
+#### Delete a Saved Report
+```http
+DELETE /api/reports/<report_id>
+Authorization: Bearer <jwt_token> (required)
+
+Response:
+{ "message": "Report deleted successfully" }
 ```
 
 ### Disease Prediction Endpoint
@@ -1247,14 +1270,19 @@ Protected endpoints:
 {
   "_id": ObjectId("..."),
   "user_id": "user_id_here",
-  "crop": "Wheat",
-  "region": "Punjab",
-  "language": "hindi",
+  "crop": "Rice",
+  "district": "Cuttack",
+  "state": "Odisha",
+  "farmingType": "General",
+  "language": "English",
   "report": {
-    "sowing": ["point1", "point2", "point3", "point4"],
-    "fertilizer": ["point1", "point2", "point3", "point4"],
-    "weather": ["point1", "point2", "point3", "point4"],
-    "calendar": ["point1", "point2", "point3", "point4"]
+    "environmentalSummary": "...",
+    "cropRequirementSummary": "...",
+    "compatibilityAnalysis": "...",
+    "suitabilityScore": "...",
+    "qualityImpactAnalysis": "...",
+    "economicFeasibility": "...",
+    "finalRecommendation": "..."
   },
   "generated_at": ISODate("2025-01-04T14:10:00.000Z")
 }
