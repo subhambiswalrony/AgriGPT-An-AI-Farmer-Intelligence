@@ -1157,8 +1157,12 @@ const WeatherPage = () => {
                     key={index}
                     whileHover={{ scale: 1.05, y: -8 }}
                     whileTap={{ scale: 0.97 }}
-                    onClick={() => setSelectedDay(day)}
-                    className="group text-center p-4 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/40 dark:to-purple-900/40 border border-blue-200 dark:border-blue-700/40 transition-shadow duration-200 hover:shadow-xl hover:shadow-blue-500/20 cursor-pointer relative overflow-hidden"
+                    onClick={() => setSelectedDay(selectedDay?.day === day.day ? null : day)}
+                    className={`group text-center p-4 rounded-2xl border transition-shadow duration-200 hover:shadow-xl hover:shadow-blue-500/20 cursor-pointer relative overflow-hidden ${
+                      selectedDay?.day === day.day
+                        ? 'bg-gradient-to-br from-blue-200 to-purple-200 dark:from-blue-800/70 dark:to-purple-800/70 border-blue-400 dark:border-blue-500 ring-2 ring-blue-400/50'
+                        : 'bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/40 dark:to-purple-900/40 border-blue-200 dark:border-blue-700/40'
+                    }`}
                   >
                     {/* Tap hint badge */}
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1195,6 +1199,170 @@ const WeatherPage = () => {
                   </motion.div>
                 ))}
               </div>
+
+              {/* ─── Inline Detail Panel ─────────────────── */}
+              <AnimatePresence>
+                {selectedDay && (
+                  <motion.div
+                    key={selectedDay.day}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-6 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-6">
+                      {/* Header */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-4">
+                          <img
+                            src={`https://openweathermap.org/img/wn/${selectedDay.iconCode}@2x.png`}
+                            alt={selectedDay.condition}
+                            className="w-14 h-14 drop-shadow-lg"
+                          />
+                          <div>
+                            <div className="text-xl font-extrabold text-gray-800 dark:text-gray-100">{selectedDay.day}</div>
+                            <div className="text-sm text-gray-400 dark:text-gray-500 capitalize">{selectedDay.date} · {selectedDay.description}</div>
+                            <div className="flex gap-3 mt-1">
+                              <span className="text-red-500 font-bold">{selectedDay.high}°C</span>
+                              <span className="text-blue-400 font-semibold">{selectedDay.low}°C</span>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setSelectedDay(null)}
+                          className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                          aria-label="Close"
+                        >
+                          <X size={16} className="text-gray-700 dark:text-gray-200" />
+                        </button>
+                      </div>
+
+                      {/* Stats Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {[
+                          { label: 'Feels Like', value: `${selectedDay.feelsLike}°C`, icon: <Thermometer size={16} className="text-orange-400" /> },
+                          { label: 'Humidity',   value: `${selectedDay.humidity}%`,   icon: <Droplets size={16} className="text-blue-400" /> },
+                          { label: 'Pressure',   value: `${selectedDay.pressure} hPa`, icon: <Gauge size={16} className="text-purple-400" /> },
+                          { label: 'Visibility', value: `${selectedDay.visibility} km`, icon: <Eye size={16} className="text-cyan-400" /> },
+                          { label: 'Wind',       value: `${selectedDay.windSpeed} km/h ${windDir(selectedDay.windDeg)}`, icon: <Wind size={16} className="text-teal-400" /> },
+                          { label: 'Wind Gust',  value: `${selectedDay.windGust} km/h`, icon: <Zap size={16} className="text-yellow-400" /> },
+                          { label: 'Cloud Cover',value: `${selectedDay.clouds}%`,       icon: <Cloud size={16} className="text-gray-400" /> },
+                          { label: 'Rain Chance', value: `${selectedDay.precipitation}%`, icon: <CloudRain size={16} className="text-indigo-400" /> },
+                        ].map((s) => (
+                          <div key={s.label} className="bg-white dark:bg-gray-800/60 rounded-2xl p-3 flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wide">
+                              {s.icon}{s.label}
+                            </div>
+                            <div className="text-sm font-bold text-gray-800 dark:text-gray-100">{s.value}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Temperature Chart */}
+                      {selectedDay.slots.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                            <Thermometer size={15} className="text-orange-400" /> Temperature (°C)
+                          </h4>
+                          <div className="bg-white dark:bg-gray-800/40 rounded-2xl p-3">
+                            <ResponsiveContainer width="100%" height={160}>
+                              <LineChart data={selectedDay.slots} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" />
+                                <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={['auto', 'auto']} />
+                                <RechartsTooltip
+                                  contentStyle={{ background: 'rgba(17,24,39,0.9)', border: 'none', borderRadius: '12px', fontSize: '12px' }}
+                                  labelStyle={{ color: '#e5e7eb' }}
+                                  itemStyle={{ color: '#f97316' }}
+                                  formatter={(v: number) => [`${v}°C`, 'Temp']}
+                                />
+                                <Line type="monotone" dataKey="temp" stroke="#f97316" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
+                                <Line type="monotone" dataKey="feelsLike" stroke="#fb923c" strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                            <p className="text-[10px] text-gray-400 mt-1 text-center">Solid = actual · Dashed = feels like</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Humidity & Rain Chart */}
+                      {selectedDay.slots.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                            <Droplets size={15} className="text-blue-400" /> Humidity (%) & Rain Chance (%)
+                          </h4>
+                          <div className="bg-white dark:bg-gray-800/40 rounded-2xl p-3">
+                            <ResponsiveContainer width="100%" height={160}>
+                              <LineChart data={selectedDay.slots} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" />
+                                <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={[0, 100]} />
+                                <RechartsTooltip
+                                  contentStyle={{ background: 'rgba(17,24,39,0.9)', border: 'none', borderRadius: '12px', fontSize: '12px' }}
+                                  labelStyle={{ color: '#e5e7eb' }}
+                                  formatter={(v: number, name: string) => [`${v}%`, name === 'humidity' ? 'Humidity' : 'Rain Chance']}
+                                />
+                                <Legend formatter={(v) => v === 'humidity' ? 'Humidity' : 'Rain Chance'} iconSize={10} wrapperStyle={{ fontSize: '11px' }} />
+                                <Line type="monotone" dataKey="humidity" stroke="#38bdf8" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
+                                <Line type="monotone" dataKey="pop" stroke="#818cf8" strokeWidth={2} strokeDasharray="4 2" dot={false} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Wind Speed Chart */}
+                      {selectedDay.slots.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                            <Wind size={15} className="text-teal-400" /> Wind Speed (km/h)
+                          </h4>
+                          <div className="bg-white dark:bg-gray-800/40 rounded-2xl p-3">
+                            <ResponsiveContainer width="100%" height={120}>
+                              <LineChart data={selectedDay.slots} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" />
+                                <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={['auto', 'auto']} />
+                                <RechartsTooltip
+                                  contentStyle={{ background: 'rgba(17,24,39,0.9)', border: 'none', borderRadius: '12px', fontSize: '12px' }}
+                                  labelStyle={{ color: '#e5e7eb' }}
+                                  formatter={(v: number) => [`${v} km/h`, 'Wind']}
+                                />
+                                <Line type="monotone" dataKey="wind" stroke="#2dd4bf" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 3-Hour Breakdown */}
+                      <div>
+                        <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                          <Calendar size={15} className="text-blue-400" /> 3-Hour Breakdown
+                        </h4>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {selectedDay.slots.map((slot, si) => (
+                            <div key={si} className="bg-white dark:bg-gray-800/60 rounded-xl p-2.5 text-center">
+                              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{slot.label}</div>
+                              <img
+                                src={`https://openweathermap.org/img/wn/${slot.iconCode}.png`}
+                                alt={slot.description}
+                                className="w-8 h-8 mx-auto"
+                              />
+                              <div className="text-sm font-bold text-gray-800 dark:text-gray-100">{slot.temp}°</div>
+                              <div className="text-[10px] text-blue-500">{slot.humidity}% 💧</div>
+                              <div className="text-[10px] text-indigo-500">{slot.pop}% 🌧</div>
+                              <div className="text-[10px] text-teal-500">{slot.wind} km/h</div>
+                              <div className="text-[10px] text-gray-400 capitalize mt-0.5">{slot.description}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Radar and Maps Section */}
@@ -1839,193 +2007,6 @@ const WeatherPage = () => {
         ]}
       />
 
-      {/* ══════════════════════════════════════
-          Day Detail Modal
-      ══════════════════════════════════════ */}
-      <AnimatePresence>
-        {selectedDay && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            onClick={() => setSelectedDay(null)}
-          >
-            <motion.div
-              className="bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl w-full sm:max-w-2xl max-h-[92vh] flex flex-col shadow-2xl border border-gray-200 dark:border-gray-700"
-              style={{ willChange: 'transform' }}
-              initial={{ y: '100%', opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: '100%', opacity: 0 }}
-              transition={{ type: 'spring', damping: 32, stiffness: 320 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Drag handle */}
-              <div className="flex justify-center pt-3 pb-1 sm:hidden shrink-0">
-                <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
-              </div>
-
-              {/* ─── Header — STICKY inside flex column ──── */}
-              <div className="shrink-0 flex items-start justify-between px-6 pt-4 pb-3 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-t-3xl z-10">
-                <div className="flex items-center gap-4">
-                  <img
-                    src={`https://openweathermap.org/img/wn/${selectedDay.iconCode}@2x.png`}
-                    alt={selectedDay.condition}
-                    className="w-16 h-16 drop-shadow-lg"
-                  />
-                  <div>
-                    <div className="text-2xl font-extrabold text-gray-800 dark:text-gray-100">{selectedDay.day}</div>
-                    <div className="text-sm text-gray-400 dark:text-gray-500 capitalize">{selectedDay.date} · {selectedDay.description}</div>
-                    <div className="flex gap-3 mt-1">
-                      <span className="text-red-500 font-bold text-lg">{selectedDay.high}°C</span>
-                      <span className="text-blue-400 font-semibold text-lg">{selectedDay.low}°C</span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedDay(null)}
-                  className="shrink-0 ml-2 p-2.5 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  aria-label="Close"
-                >
-                  <X size={18} className="text-gray-700 dark:text-gray-200" />
-                </button>
-              </div>
-
-              {/* ─── Scrollable body ─────────────────────── */}
-              <div
-                className="overflow-y-auto overscroll-contain px-6 py-5 space-y-6"
-                style={{
-                  WebkitOverflowScrolling: 'touch',
-                  willChange: 'scroll-position',
-                  transform: 'translateZ(0)',
-                  contain: 'paint',
-                } as React.CSSProperties}
-              >
-                {/* ─── Stats Grid ─────────────────────────── */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {[
-                    { label: 'Feels Like', value: `${selectedDay.feelsLike}°C`, icon: <Thermometer size={16} className="text-orange-400" /> },
-                    { label: 'Humidity',   value: `${selectedDay.humidity}%`,   icon: <Droplets size={16} className="text-blue-400" /> },
-                    { label: 'Pressure',   value: `${selectedDay.pressure} hPa`, icon: <Gauge size={16} className="text-purple-400" /> },
-                    { label: 'Visibility', value: `${selectedDay.visibility} km`, icon: <Eye size={16} className="text-cyan-400" /> },
-                    { label: 'Wind',       value: `${selectedDay.windSpeed} km/h ${windDir(selectedDay.windDeg)}`, icon: <Wind size={16} className="text-teal-400" /> },
-                    { label: 'Wind Gust',  value: `${selectedDay.windGust} km/h`, icon: <Zap size={16} className="text-yellow-400" /> },
-                    { label: 'Cloud Cover',value: `${selectedDay.clouds}%`,       icon: <Cloud size={16} className="text-gray-400" /> },
-                    { label: 'Rain Chance', value: `${selectedDay.precipitation}%`, icon: <CloudRain size={16} className="text-indigo-400" /> },
-                  ].map((s) => (
-                    <div key={s.label} className="bg-gray-50 dark:bg-gray-800/60 rounded-2xl p-3 flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wide">
-                        {s.icon}{s.label}
-                      </div>
-                      <div className="text-sm font-bold text-gray-800 dark:text-gray-100">{s.value}</div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* ─── Temperature Chart ───────────────────── */}
-                {selectedDay.slots.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                      <Thermometer size={15} className="text-orange-400" /> Temperature (°C)
-                    </h4>
-                    <div className="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-3">
-                      <ResponsiveContainer width="100%" height={160}>
-                        <LineChart data={selectedDay.slots} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" />
-                          <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                          <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={['auto', 'auto']} />
-                          <RechartsTooltip
-                            contentStyle={{ background: 'rgba(17,24,39,0.9)', border: 'none', borderRadius: '12px', fontSize: '12px' }}
-                            labelStyle={{ color: '#e5e7eb' }}
-                            itemStyle={{ color: '#f97316' }}
-                            formatter={(v: number) => [`${v}°C`, 'Temp']}
-                          />
-                          <Line type="monotone" dataKey="temp" stroke="#f97316" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
-                          <Line type="monotone" dataKey="feelsLike" stroke="#fb923c" strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                      <p className="text-[10px] text-gray-400 mt-1 text-center">Solid = actual · Dashed = feels like</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* ─── Humidity & Rain Chart ───────────────── */}
-                {selectedDay.slots.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                      <Droplets size={15} className="text-blue-400" /> Humidity (%) & Rain Chance (%)
-                    </h4>
-                    <div className="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-3">
-                      <ResponsiveContainer width="100%" height={160}>
-                        <LineChart data={selectedDay.slots} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" />
-                          <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                          <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={[0, 100]} />
-                          <RechartsTooltip
-                            contentStyle={{ background: 'rgba(17,24,39,0.9)', border: 'none', borderRadius: '12px', fontSize: '12px' }}
-                            labelStyle={{ color: '#e5e7eb' }}
-                            formatter={(v: number, name: string) => [`${v}%`, name === 'humidity' ? 'Humidity' : 'Rain Chance']}
-                          />
-                          <Legend formatter={(v) => v === 'humidity' ? 'Humidity' : 'Rain Chance'} iconSize={10} wrapperStyle={{ fontSize: '11px' }} />
-                          <Line type="monotone" dataKey="humidity" stroke="#38bdf8" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
-                          <Line type="monotone" dataKey="pop" stroke="#818cf8" strokeWidth={2} strokeDasharray="4 2" dot={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                )}
-
-                {/* ─── Wind Speed Chart ─────────────────────── */}
-                {selectedDay.slots.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                      <Wind size={15} className="text-teal-400" /> Wind Speed (km/h)
-                    </h4>
-                    <div className="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-3">
-                      <ResponsiveContainer width="100%" height={120}>
-                        <LineChart data={selectedDay.slots} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(150,150,150,0.15)" />
-                          <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} />
-                          <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} domain={['auto', 'auto']} />
-                          <RechartsTooltip
-                            contentStyle={{ background: 'rgba(17,24,39,0.9)', border: 'none', borderRadius: '12px', fontSize: '12px' }}
-                            labelStyle={{ color: '#e5e7eb' }}
-                            formatter={(v: number) => [`${v} km/h`, 'Wind']}
-                          />
-                          <Line type="monotone" dataKey="wind" stroke="#2dd4bf" strokeWidth={2.5} dot={false} activeDot={{ r: 5 }} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                )}
-
-                {/* ─── 3-Hour Slot Details ─────────────────── */}
-                <div>
-                  <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                    <Calendar size={15} className="text-blue-400" /> 3-Hour Breakdown
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {selectedDay.slots.map((slot, si) => (
-                      <div key={si} className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-2.5 text-center">
-                        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">{slot.label}</div>
-                        <img
-                          src={`https://openweathermap.org/img/wn/${slot.iconCode}.png`}
-                          alt={slot.description}
-                          className="w-8 h-8 mx-auto"
-                        />
-                        <div className="text-sm font-bold text-gray-800 dark:text-gray-100">{slot.temp}°</div>
-                        <div className="text-[10px] text-blue-500">{slot.humidity}% 💧</div>
-                        <div className="text-[10px] text-indigo-500">{slot.pop}% 🌧</div>
-                        <div className="text-[10px] text-teal-500">{slot.wind} km/h</div>
-                        <div className="text-[10px] text-gray-400 capitalize mt-0.5">{slot.description}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>{/* end scrollable body */}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
     </div>
   );
