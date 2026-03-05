@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Wheat, Sun, CloudRain, Sparkles } from 'lucide-react';
+import AgriGPTLogoAnimated from './AgriGPTLogoAnimated';
 
 interface LoaderProps {
   onLoadComplete: () => void;
@@ -12,31 +13,18 @@ const Loader: React.FC<LoaderProps> = ({ onLoadComplete }) => {
   useEffect(() => {
     const timer = setInterval(() => {
       setProgress((oldProgress) => {
-        const newProgress = oldProgress + 2;
+        const newProgress = oldProgress + 1;
         if (newProgress >= 100) {
           clearInterval(timer);
-          setTimeout(onLoadComplete, 500);
+          setTimeout(onLoadComplete, 800);
           return 100;
         }
         return newProgress;
       });
-    }, 50);
+    }, 30);
 
     return () => clearInterval(timer);
   }, [onLoadComplete]);
-
-  const iconVariants = {
-    initial: { scale: 0, rotate: 0 },
-    animate: { 
-      scale: [0, 1.2, 1], 
-      rotate: [0, 10, -10, 0],
-      transition: { 
-        duration: 1.5, 
-        repeat: Infinity,
-        repeatType: "reverse" as const
-      }
-    }
-  };
 
   const leafVariants = {
     initial: { x: -100, opacity: 0 },
@@ -58,7 +46,7 @@ const Loader: React.FC<LoaderProps> = ({ onLoadComplete }) => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="text-center z-10 relative w-full max-w-sm mx-auto px-4 py-8">
+      <div className="text-center z-10 relative w-full max-w-md mx-auto px-4 py-8">
         {/* Logo and Title with glassmorphism */}
         <motion.div
           className="mb-8 backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 rounded-3xl p-8 pb-10 border-2 border-green-200/50 dark:border-green-700/50 shadow-2xl"
@@ -66,29 +54,11 @@ const Loader: React.FC<LoaderProps> = ({ onLoadComplete }) => {
           animate={{ y: 0, opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, type: "spring" }}
         >
-          <div className="flex items-center justify-center mb-4 overflow-visible">
-            {/* Floating plant emoji */}
-            <motion.div
-              className="relative mr-4"
-              variants={iconVariants}
-              initial="initial"
-              animate="animate"
-            >
-              <motion.div
-                animate={{
-                  opacity: [0.3, 0.7, 0.3],
-                  scale: [1, 1.5, 1]
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity
-                }}
-                className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full blur-2xl"
-              />
-              <span className="text-5xl relative z-10">🌿</span>
-            </motion.div>
+          <div className="flex items-center justify-center mb-4 overflow-visible gap-3">
+            {/* Animated logo – 6-phase sequence */}
+            <AgriGPTLogoAnimated />
             <motion.h1 
-              className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent pb-2"
+              className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 dark:from-green-400 dark:via-emerald-400 dark:to-teal-400 bg-clip-text text-transparent pb-2"
               variants={leafVariants}
               initial="initial"
               animate="animate"
@@ -170,8 +140,8 @@ const Loader: React.FC<LoaderProps> = ({ onLoadComplete }) => {
           <div className="relative backdrop-blur-xl bg-white/50 dark:bg-gray-800/50 rounded-full h-4 overflow-hidden border-2 border-green-200/50 dark:border-green-700/50 shadow-lg">
             <motion.div
               className="h-full bg-gradient-to-r from-green-400 via-emerald-500 to-teal-600 dark:from-green-500 dark:via-emerald-600 dark:to-teal-700 rounded-full relative overflow-hidden"
-              style={{ width: `${progress}%` }}
-              transition={{ duration: 0.1 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.08, ease: 'linear' }}
             >
               {/* Shimmer effect */}
               <motion.div
