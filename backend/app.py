@@ -4,7 +4,7 @@ from flask_cors import CORS
 # Core feature handlers
 from chat import handle_chat
 from voice import handle_voice
-from report import generate_farming_report
+from report_generator.report import generate_farming_report
 
 # Node.js weather server lifecycle
 from node_server import start_weather_server
@@ -188,17 +188,22 @@ def report_api():
 
         data = request.json
 
-        crop_name = data.get("cropName")
-        region = data.get("region")
-        language = data.get("language")  # optional
+        # Only 5 user-provided inputs – env & crop data are auto-fetched in report.py
+        crop_name    = data.get("cropName", "").strip()
+        district     = data.get("district", "").strip()
+        state        = data.get("state", "").strip()
+        farming_type = data.get("farmingType", "General").strip()
+        language     = data.get("language", "English").strip()
 
-        if not crop_name or not region:
-            return jsonify({"error": "Crop name and region are required"}), 400
+        if not crop_name or not district or not state:
+            return jsonify({"error": "Crop name, district, and state are required"}), 400
 
         report = generate_farming_report(
             user_id=user_id,
             crop_name=crop_name,
-            region=region,
+            district=district,
+            state=state,
+            farming_type=farming_type,
             language=language
         )
 
@@ -224,6 +229,22 @@ def report_history():
 
     except Exception as e:
         print(f"❌ Error in report_history: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+# -------------------- DELETE SINGLE REPORT --------------------
+@app.route("/api/reports/<report_id>", methods=["DELETE"])
+@token_required
+def delete_report_api(report_id):
+    try:
+        user_id = request.current_user["user_id"]
+        from services.db_service import delete_report
+        deleted = delete_report(report_id, user_id)
+        if deleted:
+            return jsonify({"message": "Report deleted"}), 200
+        return jsonify({"error": "Report not found or not authorised"}), 404
+    except Exception as e:
+        print(f"❌ Error in delete_report_api: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
 
