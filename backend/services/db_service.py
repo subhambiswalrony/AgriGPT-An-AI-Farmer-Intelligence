@@ -101,12 +101,27 @@ def save_report(user_id, crop_name, region, report_data, language):
 
 def get_user_reports(user_id):
     """Get all reports for a user"""
-    return list(
+    docs = list(
         report_collection.find(
-            {"user_id": user_id},
-            {"_id": 0}
+            {"user_id": user_id}
         ).sort("timestamp", -1)
     )
+    for doc in docs:
+        doc["_id"] = str(doc["_id"])
+    return docs
+
+
+def delete_report(report_id: str, user_id: str) -> bool:
+    """Delete a single report by its id, scoped to the owning user"""
+    from bson import ObjectId
+    try:
+        result = report_collection.delete_one(
+            {"_id": ObjectId(report_id), "user_id": user_id}
+        )
+        return result.deleted_count == 1
+    except Exception as e:
+        print(f"✗ Error deleting report {report_id}: {str(e)}")
+        return False
 
 
 # ==================== CHAT SESSION MANAGEMENT ====================
