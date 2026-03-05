@@ -67,17 +67,19 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
 - Seamless upgrade path to full features with authentication
 
 ### 6. **Farming Report Generation**
-- AI-powered comprehensive farming reports using Gemini AI
+- AI-powered comprehensive farming suitability reports using Gemini AI
+- Auto-fetches environmental data (temperature, humidity, soil type) from the Node.js weather microservice
 - Generates reports in 13 Indian languages
-- Report includes 4 key sections:
-  - **Sowing Advice**: Timing, depth, spacing, watering (4 points)
-  - **Fertilizer Plan**: NPK quantities, organic manure (4 points)
-  - **Weather Protection**: Sun, rain, cold, wind (4 points)
-  - **Farming Calendar**: Week-by-week activities (4 points)
+- Report includes **7 analytical sections**:
+  - **Environmental Summary**: Current temperature, humidity, soil type, annual rainfall for the selected district
+  - **Crop Requirement Summary**: Ideal growing parameters from AgriGPT's crop database
+  - **Compatibility Analysis**: Factor-by-factor comparison (temperature, humidity, rainfall, soil type)
+  - **Suitability Score**: 100-point score with classification (Highly Suitable / Moderately Suitable / Risky / Not Recommended)
+  - **Quality Impact Analysis**: Risks and yield quality effects from environmental mismatches
+  - **Economic Feasibility**: Market viability and profitability insights for the selected farming type
+  - **Final Recommendation**: 3 actionable expert management recommendations
 - Language-specific prompts for accurate native responses
-- Flexible parsing with multiple section detection patterns
 - Comprehensive debug logging for troubleshooting
-- Fallback data for English, Hindi, Odia
 - Reports saved to database for authenticated users
 
 ### 7. **AI Plant Disease Detection**
@@ -195,12 +197,16 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
 ### Report Generation (Trial & Authenticated)
 - `POST /api/report` - Generate farming report
   - Headers: `Authorization: Bearer <token>` (optional, defaults to trial user)
-  - Body: `{ "cropName": "Rice", "region": "Odisha", "language": "English" }`
-  - Returns: Report object with 4 sections (sowing, fertilizer, weather, calendar)
+  - Body: `{ "cropName": "Rice", "district": "Cuttack", "state": "Odisha", "farmingType": "General", "language": "English" }`
+  - Returns: Report object with 7 analytical sections (environmentalSummary, cropRequirementSummary, compatibilityAnalysis, suitabilityScore, qualityImpactAnalysis, economicFeasibility, finalRecommendation)
 
 - `GET /api/reports` - Get all saved farming reports (authenticated users only)
   - Headers: `Authorization: Bearer <token>` (required)
   - Returns: Array of saved report objects with timestamps
+
+- `DELETE /api/reports/<report_id>` - Delete a specific saved report
+  - Headers: `Authorization: Bearer <token>` (required)
+  - Returns: `{ "message": "Report deleted successfully" }`
 
 ### Disease Prediction (Authenticated)
 - `POST /api/predict` - Proxy to external AI disease-prediction model
@@ -395,7 +401,12 @@ backend/
 ├── 📄 app.py                      # Main Flask application entry point with Firebase initialization
 ├── 📄 chat.py                     # Text chat handler with multilingual language detection
 ├── 📄 voice.py                    # Voice input handler with Faster Whisper STT (offline)
-├── 📄 report.py                   # AI-powered farming report generation with Gemini AI
+├── � report_generator/           # AI farming suitability report engine
+│   ├── 📄 __init__.py             # Package init
+│   ├── 📄 report.py               # 7-section AI farming suitability report; auto-fetches env data from Node server
+│   └── 📁 dataset/                # Reference data
+│       ├── 📄 crop_requirements.json  # Ideal growing parameters per crop
+│       └── 📄 state_annual_rainfall.json  # State-level annual rainfall data
 ├── 📄 make_admin.py               # CLI utility to grant/revoke developer (admin panel) access
 ├── 📄 node_server.py              # Launches weather_and_soil_analysis/server.js as a managed child process
 ├── 📄 test_db.py                  # Database connection testing utility script
@@ -452,7 +463,7 @@ backend/
 - `app.py` - Flask server initialization, CORS setup, route registration, Firebase Admin SDK init
 - `chat.py` - Handles text chat requests, language detection, AI validation, response generation
 - `voice.py` - Processes voice audio files, Whisper transcription, language detection from audio
-- `report.py` - Generates comprehensive farming reports with 4 sections in user's language
+- `report_generator/report.py` - Generates 7-section AI agricultural suitability reports; auto-fetches env data (temp, humidity, soil type) from Node server; uses `dataset/crop_requirements.json` and `dataset/state_annual_rainfall.json`; scores 0–100 on 4 factors
 - `make_admin.py` - CLI utility to grant or revoke developer (admin panel) access for a user
 - `node_server.py` - Starts and manages the `weather_and_soil_analysis/server.js` Node.js process as a subprocess of Flask; streams its stdout to the Python console; registers `atexit`/`SIGINT`/`SIGTERM` handlers so the Node server is always killed cleanly when Flask exits
 - `test_db.py` - Test MongoDB connectivity, view collections, test CRUD operations
@@ -738,7 +749,9 @@ Content-Type: application/json
 
 {
   "cropName": "Rice",
-  "region": "Odisha",
+  "district": "Cuttack",
+  "state": "Odisha",
+  "farmingType": "General",
   "language": "English"
 }
 ```
@@ -812,35 +825,20 @@ MongoDB Database: `agrigpt`
 ```json
 {
   "_id": ObjectId("..."),
-  "user_id": "user_object_id",  // References users._id
+  "user_id": "user_object_id",
   "crop_name": "Rice",
-  "region": "Odisha",
+  "district": "Cuttack",
+  "state": "Odisha",
+  "farming_type": "General",
   "language": "English",
   "report_data": {
-    "sowingAdvice": [
-      { "emoji": "🌱", "text": "Best sowing time is June-July..." },
-      { "emoji": "📏", "text": "Seed depth: 2-3 cm, spacing: 20x15 cm" },
-      { "emoji": "🌾", "text": "Row spacing 20 cm for better growth" },
-      { "emoji": "💧", "text": "Regular watering needed in first 2 weeks" }
-    ],
-    "fertilizerPlan": [
-      { "emoji": "🌿", "text": "NPK 120:60:40 kg/hectare recommended" },
-      { "emoji": "🔢", "text": "Split doses: 50% basal, 25% after 30 days..." },
-      { "emoji": "🌱", "text": "Organic manure: 10 tons/hectare" },
-      { "emoji": "💧", "text": "Foliar spray of micronutrients at flowering" }
-    ],
-    "weatherProtection": [
-      { "emoji": "☀️", "text": "Protect from extreme heat with irrigation" },
-      { "emoji": "🌧️", "text": "Ensure proper drainage during heavy rain" },
-      { "emoji": "❄️", "text": "Cold protection during winter months" },
-      { "emoji": "💨", "text": "Windbreaks recommended for exposed areas" }
-    ],
-    "farmingCalendar": [
-      { "emoji": "📅", "text": "Week 1-2: Land preparation and sowing" },
-      { "emoji": "🌱", "text": "Week 3-4: First weeding and thinning" },
-      { "emoji": "💧", "text": "Week 5-8: Regular irrigation and fertilizer" },
-      { "emoji": "🌾", "text": "Week 12-16: Harvesting when grain is mature" }
-    ]
+    "environmentalSummary": "Current temp 32°C, humidity 78%, clay-loam soil, annual rainfall 1450mm...",
+    "cropRequirementSummary": "Rice requires 25-35°C, 80%+ humidity, 1200-2000mm rainfall, loam to clay-loam soil...",
+    "compatibilityAnalysis": "Temperature: Optimal. Humidity: Optimal. Rainfall: Sufficient. Soil: Excellent match...",
+    "suitabilityScore": "87/100 — Highly Suitable",
+    "qualityImpactAnalysis": "Minor heat stress risk during grain filling; ensure adequate water...",
+    "economicFeasibility": "High market demand in Odisha; General farming type suitable for small/medium holdings...",
+    "finalRecommendation": "1. Use drought-tolerant varieties... 2. Apply split N doses... 3. Maintain 5cm standing water..."
   },
   "timestamp": ISODate("2025-01-05T11:00:00.000Z")
 }
@@ -951,13 +949,13 @@ MongoDB Database: `agrigpt`
 7. Save to database with voice metadata
 
 ### 4. Report Generation Process
-1. Receive crop name, region, language
-2. Generate language-specific prompt
-3. Request Gemini AI for comprehensive report
-4. Parse response into 4 sections (16 points total)
-5. Apply fallback data if parsing fails
+1. Receive crop name, district, state, farming type, language
+2. Auto-fetch environmental data (temperature, humidity, soil type) from Node.js weather server
+3. Look up crop requirements from `dataset/crop_requirements.json` and rainfall from `dataset/state_annual_rainfall.json`
+4. Build language-specific prompt with all environmental context
+5. Request Gemini AI for comprehensive 7-section suitability analysis
 6. Save report to database (authenticated users only)
-7. Return structured JSON report
+7. Return structured JSON report with 7 sections
 
 ### 5. Trial vs Authenticated Users
 | Feature | Trial Users | Authenticated Users |
