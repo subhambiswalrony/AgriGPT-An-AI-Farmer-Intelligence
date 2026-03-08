@@ -1,4 +1,4 @@
-# 🌾 AgriGPT Frontend
+﻿# 🌾 AgriGPT Frontend
 
 A modern, high-performance React + TypeScript frontend for the AgriGPT agricultural chatbot application with Firebase Google Sign-In integration and mobile-optimized performance.
 
@@ -431,6 +431,9 @@ frontend/
 │   ├── 📁 contexts/                   # React Context providers
 │   │   └── 📄 ThemeContext.tsx        # Dark/Light theme context provider
 │   │
+│   ├── 📁 data/                      # Static reference data
+│   │   └── 📄 indiaStatesDistricts.ts  # India states & districts lookup for report form dropdowns
+│   │
 │   ├── 📁 hooks/                      # Custom React hooks
 │   │   ├── 📄 useOptimizedAnimation.ts # Performance optimization hook for animations
 │   │   └── 📄 useWeather.ts           # Weather data fetching hook
@@ -486,6 +489,9 @@ frontend/
 
 **Contexts:**
 - `ThemeContext.tsx` - Global theme state (dark/light), localStorage persistence
+
+**Static Data:**
+- `indiaStatesDistricts.ts` - TypeScript lookup of all Indian states and their districts; used by ReportPage dropdowns for crop region selection
 
 **Custom Hooks:**
 - `useWeather.ts` - Fetches weather data from API, handles loading/error states
