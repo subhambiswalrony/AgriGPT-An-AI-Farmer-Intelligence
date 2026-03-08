@@ -19,3 +19,4 @@ weasyprint
 langdetect
 gunicorn
 requests
+deep-translator
