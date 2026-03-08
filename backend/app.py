@@ -2,8 +2,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 # Core feature handlers
-from chat import handle_chat
-from voice import handle_voice
+from chat.chat_typing import handle_chat
+from chat.voice import handle_voice
 from report_generator.report import generate_farming_report
 
 # Node.js weather server lifecycle
@@ -146,12 +146,13 @@ def delete_chat(chat_id):
 def voice_api():
     try:
         user_id = request.current_user["user_id"]
-        audio = request.files.get("audio")
+        audio   = request.files.get("audio")
+        chat_id = request.form.get("chat_id")  # optional: continue existing session
 
         if not audio:
             return jsonify({"error": "Audio file is required"}), 400
 
-        result = handle_voice(audio, user_id)
+        result = handle_voice(audio, user_id, chat_id=chat_id or None)
         return jsonify(result)
 
     except Exception as e:
