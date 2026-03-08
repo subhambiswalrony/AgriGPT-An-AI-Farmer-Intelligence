@@ -194,10 +194,10 @@ const Navigation = () => {
                 }}
                 className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full blur-xl opacity-50"
               />
-              <img src="/agrigpt_logo.png" alt="AgriGPT Logo" className="w-14 h-14 sm:w-16 sm:h-16 relative z-10 object-contain drop-shadow-md" style={{ minWidth: '56px', minHeight: '56px' }} />
+              <img src="/agrigpt_logo.png" alt="AgriGPT Logo" className="w-16 h-16 sm:w-20 sm:h-20 relative z-10 object-contain drop-shadow-md" />
             </motion.div>
             <motion.span
-              className="text-lg sm:text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-teal-400 bg-clip-text text-transparent transition-all duration-200"
+              className="text-lg sm:text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-teal-400 bg-clip-text text-transparent transition-all duration-200 self-center"
               whileHover={{ scale: 1.05 }}
             >
               AgriGPT
