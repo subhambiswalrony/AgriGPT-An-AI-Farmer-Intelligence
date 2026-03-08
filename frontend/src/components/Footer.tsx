@@ -29,8 +29,8 @@ const Footer = () => {
               }}
               className="absolute bg-gradient-to-r from-green-400 to-emerald-400 rounded-full blur-xl opacity-50 w-8 h-8"
             />
-            <span className="text-2xl relative z-10">🌿</span>
-            <div>
+            <img src="/agrigpt_logo.png" alt="AgriGPT Logo" className="w-16 h-16 relative z-10 object-contain drop-shadow-md" />
+            <div className="flex flex-col justify-center">
               <div className="font-bold text-xl bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-teal-400 bg-clip-text text-transparent">
                 AgriGPT
               </div>
