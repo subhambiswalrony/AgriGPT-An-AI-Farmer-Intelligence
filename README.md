@@ -1,4 +1,4 @@
-# 🌾 AgriGPT - AI-Powered Agricultural Expert System
+﻿# 🌾 AgriGPT - AI-Powered Agricultural Expert System
 
 <div align="center">
 
@@ -383,6 +383,9 @@ AgriGPT-Chat-Report_System/
 │   │   │   ├── 📄 useOptimizedAnimation.ts # Animation performance hook
 │   │   │   └── 📄 useWeather.ts          # Weather data fetching hook
 │   │   │
+│   │   ├── 📁 data/                      # Static reference data
+│   │   │   └── 📄 indiaStatesDistricts.ts # India states & districts lookup for report form
+│   │   │
 │   │   ├── 📁 utils/                     # Utility functions
 │   │   │   ├── 📄 debounce.ts            # Debounce utility
 │   │   │   ├── 📄 generateReportPDF.ts   # Client-side PDF generation (jsPDF + html2canvas); 7-section color-coded layout
@@ -438,8 +441,11 @@ AgriGPT-Chat-Report_System/
 │   │   └── 📄 config.py                  # Config loader
 │   │
 │   ├── 📄 app.py                         # Flask app entry point
-│   ├── 📄 chat.py                        # Chat handler logic
-│   ├── 📄 voice.py                       # Voice input handler
+│   ├── 📁 chat/                          # Chat & voice handler package
+│   │   ├── 📄 __init__.py               # Package init
+│   │   ├── 📄 chat_typing.py            # Multilingual AI text chat handler
+│   │   ├── 📁 odia_language_data/       # Odia language reference data
+│   │   └── 📄 voice.py                  # Voice input handler (Faster Whisper STT)
 │   ├── � report_generator/              # AI farming suitability report engine
 │   │   ├── 📄 __init__.py                # Package init
 │   │   ├── 📄 report.py                  # 7-section AI farming suitability report; auto-fetches env data from Node server
