@@ -1,4 +1,4 @@
-# 🌾 AgriGPT - Agricultural Expert Chatbot Backend
+﻿# 🌾 AgriGPT - Agricultural Expert Chatbot Backend
 
 A multilingual AI-powered chatbot backend designed to assist Indian farmers with agriculture and farming-related queries. Built with Flask and powered by Google's Gemini 2.5-flash AI model, featuring dual authentication (Email/Password + Google Sign-In via Firebase).
 
@@ -399,9 +399,12 @@ A multilingual AI-powered chatbot backend designed to assist Indian farmers with
 ```
 backend/
 ├── 📄 app.py                      # Main Flask application entry point with Firebase initialization
-├── 📄 chat.py                     # Text chat handler with multilingual language detection
-├── 📄 voice.py                    # Voice input handler with Faster Whisper STT (offline)
-├── � report_generator/           # AI farming suitability report engine
+├── 📁 chat/                       # Chat & voice handler package
+│   ├── 📄 __init__.py             # Package init
+│   ├── 📄 chat_typing.py          # Multilingual AI text chat handler
+│   ├── 📁 odia_language_data/     # Odia language reference data
+│   └── 📄 voice.py                # Voice input handler (Faster Whisper STT)
+├── 📁 report_generator/           # AI farming suitability report engine
 │   ├── 📄 __init__.py             # Package init
 │   ├── 📄 report.py               # 7-section AI farming suitability report; auto-fetches env data from Node server
 │   └── 📁 dataset/                # Reference data
@@ -461,8 +464,8 @@ backend/
 
 **Core Application Files:**
 - `app.py` - Flask server initialization, CORS setup, route registration, Firebase Admin SDK init
-- `chat.py` - Handles text chat requests, language detection, AI validation, response generation
-- `voice.py` - Processes voice audio files, Whisper transcription, language detection from audio
+- `chat/chat_typing.py` - Handles text chat requests, language detection, AI validation, response generation
+- `chat/voice.py` - Processes voice audio files, Whisper transcription, language detection from audio
 - `report_generator/report.py` - Generates 7-section AI agricultural suitability reports; auto-fetches env data (temp, humidity, soil type) from Node server; uses `dataset/crop_requirements.json` and `dataset/state_annual_rainfall.json`; scores 0–100 on 4 factors
 - `make_admin.py` - CLI utility to grant or revoke developer (admin panel) access for a user
 - `node_server.py` - Starts and manages the `weather_and_soil_analysis/server.js` Node.js process as a subprocess of Flask; streams its stdout to the Python console; registers `atexit`/`SIGINT`/`SIGTERM` handlers so the Node server is always killed cleanly when Flask exits
