@@ -3,9 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Sprout, Download, LogIn, FileText, Sparkles, TrendingUp, Zap, Cloud, Lock, UserPlus, Globe2, FlaskConical, ShieldAlert, CheckCircle2, Languages, Trash2, History, Clock, Leaf } from 'lucide-react';
 import TutorialModal from '../components/TutorialModal';
 import { useNavigate } from 'react-router-dom';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import { getApiUrl, API_ENDPOINTS } from '../config/api';
+import { generateReportPDF } from '../utils/generateReportPDF';
 
 // ── India States & Districts ─────────────────────────────────────────────────
 const STATE_DISTRICTS: Record<string, string[]> = {
@@ -75,6 +74,17 @@ interface CropReport {
   finalRecommendation: string[];
 }
 
+const getHistoryCropName = (item: ReportHistory): string => {
+  return item.crop_name || item.report_data?.crop || 'Unknown Crop';
+};
+
+const getHistoryLocation = (item: ReportHistory): string => {
+  const districtName = item.district || item.report_data?.district || '';
+  const stateName = item.state || item.report_data?.state || '';
+  if (districtName && stateName) return `${districtName}, ${stateName}`;
+  return districtName || stateName || 'Location not available';
+};
+
 // ── Component ────────────────────────────────────────────────────────────────
 const ReportPage = () => {
   const [cropName, setCropName] = useState('');
@@ -125,9 +135,9 @@ const ReportPage = () => {
   };
 
   const loadHistoryReport = (item: ReportHistory) => {
-    setCropName(item.crop_name);
-    setState(item.state);
-    setDistrict(item.district);
+    setCropName(item.crop_name || item.report_data?.crop || '');
+    setState(item.state || item.report_data?.state || '');
+    setDistrict(item.district || item.report_data?.district || '');
     setLanguage(item.language);
     setReport(item.report_data);
     setTimeout(() => reportRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
@@ -165,20 +175,20 @@ const ReportPage = () => {
     if (!reportRef.current || !report) return;
     setIsDownloading(true);
     try {
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
+      await generateReportPDF({
+        crop: report.crop,
+        district: report.district,
+        state: report.state,
+        farming_type: report.farming_type ?? 'General',
+        language: report.language,
+        environmentalSummary: report.environmentalSummary,
+        cropRequirementSummary: report.cropRequirementSummary,
+        compatibilityAnalysis: report.compatibilityAnalysis,
+        suitabilityScore: report.suitabilityScore,
+        qualityImpactAnalysis: report.qualityImpactAnalysis,
+        economicFeasibility: report.economicFeasibility ?? [],
+        finalRecommendation: report.finalRecommendation,
       });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const ratio = Math.min(pdfWidth / canvas.width, pdfHeight / canvas.height);
-      const imgX = (pdfWidth - canvas.width * ratio) / 2;
-      pdf.addImage(imgData, 'PNG', imgX, 10, canvas.width * ratio, canvas.height * ratio);
-      pdf.save(`${report.crop}_${report.district}_${report.state}_Report.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Failed to generate PDF. Please try again.');
@@ -439,11 +449,11 @@ const ReportPage = () => {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-2">
                                   <Leaf className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                                  <h4 className="font-bold text-gray-800 dark:text-gray-100 truncate">{item.crop_name}</h4>
+                                  <h4 className="font-bold text-gray-800 dark:text-gray-100 truncate">{getHistoryCropName(item)}</h4>
                                 </div>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1">
                                   <MapPin size={14} />
-                                  <span className="truncate">{item.district}, {item.state}</span>
+                                  <span className="truncate">{getHistoryLocation(item)}</span>
                                 </p>
                                 <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
                                   <Clock size={12} className="mr-1 flex-shrink-0" />

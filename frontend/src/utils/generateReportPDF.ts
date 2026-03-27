@@ -55,7 +55,7 @@ function buildHTML(report: CropReportData): string {
       </div>`).join('');
 
     return `
-      <div style="margin-bottom:18px;">
+      <div data-pdf-block="section" style="margin-bottom:18px;">
         <div style="background:${sec.color};border-radius:8px 8px 0 0;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;">
           <div style="display:flex;align-items:center;gap:10px;">
             <div style="width:22px;height:22px;background:rgba(255,255,255,0.25);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff;font-family:'Noto Sans',sans-serif;">${sec.num}</div>
@@ -78,7 +78,7 @@ function buildHTML(report: CropReportData): string {
 <body>
 
 <!-- HEADER -->
-<div style="background:linear-gradient(135deg,#16a34a,#0d9488);padding:24px 28px 20px;position:relative;overflow:hidden;">
+<div data-pdf-block="header" style="background:linear-gradient(135deg,#16a34a,#0d9488);padding:24px 28px 20px;position:relative;overflow:hidden;">
   <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#34d399,#6ee7b7);"></div>
   <div style="position:absolute;right:-20px;top:-20px;font-size:120px;opacity:0.06;line-height:1;">&#127807;</div>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -95,7 +95,7 @@ function buildHTML(report: CropReportData): string {
 </div>
 
 <!-- METADATA -->
-<div style="margin:16px 20px;background:#f0fdf4;border:1.5px solid #a7f3d0;border-radius:10px;padding:14px 18px;">
+<div data-pdf-block="meta" style="margin:16px 20px;background:#f0fdf4;border:1.5px solid #a7f3d0;border-radius:10px;padding:14px 18px;">
   <div style="display:grid;grid-template-columns:1fr 1px 1fr;gap:0;">
     <div style="padding-right:18px;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;">
       <span style="font-size:8.5px;font-weight:700;color:#6b7280;letter-spacing:1px;">CROP</span>
@@ -121,7 +121,7 @@ function buildHTML(report: CropReportData): string {
 <div style="padding:0 20px 20px;">${sectionsHTML}</div>
 
 <!-- FOOTER -->
-<div style="background:#111827;padding:9px 20px;display:flex;justify-content:space-between;align-items:center;">
+<div data-pdf-block="footer" style="background:#111827;padding:9px 20px;display:flex;justify-content:space-between;align-items:center;">
   <span style="font-size:8.5px;color:#9ca3af;">AgriGPT  |  Agricultural Suitability Report</span>
   <span style="font-size:8.5px;color:#9ca3af;">${formatDate(true)}</span>
   <span style="font-size:8.5px;color:#9ca3af;">For personal agricultural use only</span>
@@ -162,43 +162,108 @@ export async function generateReportPDF(report: CropReportData): Promise<void> {
   iframe.style.height = `${iDoc.body.scrollHeight + 60}px`;
   await new Promise(r => setTimeout(r, 150));
 
-  // 3. Capture with html2canvas
-  const canvas = await html2canvas(iDoc.body, {
-    scale: 2.5,
-    useCORS: true,
-    allowTaint: true,
-    logging: false,
-    backgroundColor: '#ffffff',
-    width: 794,
-    windowWidth: 794,
-  });
+  // 3. Render each semantic block (header/meta/sections/footer) so page breaks
+  // happen between blocks rather than slicing through cards.
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 8;
+  const contentW = pageW - margin * 2;
+  const pageBottom = pageH - margin;
+  const blockGap = 2;
+  let y = margin;
 
-  document.body.removeChild(iframe);
+  const blocks = Array.from(iDoc.querySelectorAll<HTMLElement>('[data-pdf-block]'));
 
-  // 4. Slice canvas into A4 portrait pages
-  const A4_W_PX = canvas.width;
-  const A4_H_PX = Math.round(canvas.width * (297 / 210)); // A4 aspect ratio
+  try {
+    for (const block of blocks) {
+      const blockCanvas = await html2canvas(block, {
+        scale: 2.2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: 794,
+        windowWidth: 794,
+      });
 
-  const pdf  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pdfW = pdf.internal.pageSize.getWidth();
-  const pdfH = pdf.internal.pageSize.getHeight();
-  const totalPages = Math.ceil(canvas.height / A4_H_PX);
+      const blockHInPdf = (blockCanvas.height * contentW) / blockCanvas.width;
+      const maxContentH = pageH - margin * 2;
 
-  for (let page = 0; page < totalPages; page++) {
-    if (page > 0) pdf.addPage();
+      // Very tall blocks are split into page-sized slices.
+      if (blockHInPdf > maxContentH) {
+        if (y !== margin) {
+          pdf.addPage();
+          y = margin;
+        }
 
-    const srcY  = page * A4_H_PX;
-    const srcH  = Math.min(A4_H_PX, canvas.height - srcY);
+        const pxPerMm = blockCanvas.width / contentW;
+        const maxSlicePx = Math.max(1, Math.floor(maxContentH * pxPerMm));
+        let offsetY = 0;
 
-    const slice     = document.createElement('canvas');
-    slice.width     = A4_W_PX;
-    slice.height    = A4_H_PX;
-    const ctx       = slice.getContext('2d')!;
-    ctx.fillStyle   = '#ffffff';
-    ctx.fillRect(0, 0, A4_W_PX, A4_H_PX);
-    ctx.drawImage(canvas, 0, srcY, A4_W_PX, srcH, 0, 0, A4_W_PX, srcH);
+        while (offsetY < blockCanvas.height) {
+          const slicePx = Math.min(maxSlicePx, blockCanvas.height - offsetY);
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = blockCanvas.width;
+          sliceCanvas.height = slicePx;
+          const sliceCtx = sliceCanvas.getContext('2d')!;
+          sliceCtx.fillStyle = '#ffffff';
+          sliceCtx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+          sliceCtx.drawImage(
+            blockCanvas,
+            0,
+            offsetY,
+            blockCanvas.width,
+            slicePx,
+            0,
+            0,
+            blockCanvas.width,
+            slicePx,
+          );
 
-    pdf.addImage(slice.toDataURL('image/jpeg', 0.97), 'JPEG', 0, 0, pdfW, pdfH, undefined, 'FAST');
+          const sliceHInPdf = (slicePx * contentW) / blockCanvas.width;
+          pdf.addImage(
+            sliceCanvas.toDataURL('image/jpeg', 0.97),
+            'JPEG',
+            margin,
+            y,
+            contentW,
+            sliceHInPdf,
+            undefined,
+            'FAST',
+          );
+
+          offsetY += slicePx;
+          if (offsetY < blockCanvas.height) {
+            pdf.addPage();
+            y = margin;
+          } else {
+            y += sliceHInPdf + blockGap;
+          }
+        }
+
+        continue;
+      }
+
+      if (y + blockHInPdf > pageBottom) {
+        pdf.addPage();
+        y = margin;
+      }
+
+      pdf.addImage(
+        blockCanvas.toDataURL('image/jpeg', 0.97),
+        'JPEG',
+        margin,
+        y,
+        contentW,
+        blockHInPdf,
+        undefined,
+        'FAST',
+      );
+      y += blockHInPdf + blockGap;
+    }
+  } finally {
+    document.body.removeChild(iframe);
   }
 
   // 5. Save
